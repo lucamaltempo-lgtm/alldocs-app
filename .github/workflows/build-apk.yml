@@ -20,6 +20,11 @@ jobs:
 
       - name: Imposta Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: false
+
+      - name: Accetta le licenze SDK
+        run: yes | sdkmanager --licenses || true
 
       - name: Installa piattaforma e build-tools Android
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
