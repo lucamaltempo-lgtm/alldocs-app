@@ -49,6 +49,10 @@ class MainActivity : AppCompatActivity() {
                 fileChooserCallback?.onReceiveValue(null)
                 fileChooserCallback = filePathCallback
                 val intent = fileChooserParams?.createIntent()
+                if (intent == null) {
+                    fileChooserCallback = null
+                    return false
+                }
                 return try {
                     startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
                     true
