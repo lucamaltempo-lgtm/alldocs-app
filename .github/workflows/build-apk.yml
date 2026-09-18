@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: AllDocsApp
     steps:
       - name: Checkout del codice
         uses: actions/checkout@v4
@@ -42,4 +45,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AllDocs-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: AllDocsApp/app/build/outputs/apk/debug/app-debug.apk
