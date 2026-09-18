@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.AllDocs" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">#1a5f96</item>
+        <item name="colorPrimaryDark">#124a75</item>
+        <item name="colorAccent">#d4a574</item>
+        <item name="android:statusBarColor">#1a5f96</item>
+        <item name="android:windowBackground">#ffffff</item>
+    </style>
+</resources>

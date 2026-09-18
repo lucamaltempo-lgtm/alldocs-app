@@ -1,0 +1,2873 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preventivi & Ordini Offline</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 2px solid #ddd;
+            background: #f9f9f9;
+        }
+        .tab-btn {
+            flex: 1;
+            min-width: 70px;
+            padding: 15px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+        }
+        @media (max-width: 480px) {
+            .tab-btn {
+                padding: 10px 3px;
+                font-size: 11px;
+                min-width: 0;
+            }
+            label { font-size: 10px; }
+            input[type="text"], input[type="email"], input[type="number"], input[type="date"], textarea, select {
+                font-size: 12px;
+                padding: 8px;
+            }
+            h2 { font-size: 17px; }
+            h3 { font-size: 14px; }
+            .btn { font-size: 11px; padding: 8px 12px; }
+        }
+        .tab-btn.active {
+            color: #1a5f96;
+            border-bottom: 3px solid #1a5f96;
+            background: white;
+        }
+        .content {
+            padding: 30px;
+        }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        
+        /* Form styling */
+        .form-group {
+            margin-bottom: 18px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #333;
+            font-size: 13px;
+        }
+        input[type="text"],
+        input[type="email"],
+        input[type="number"],
+        input[type="date"],
+        input[type="file"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 13px;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        input[type="file"] {
+            padding: 8px;
+        }
+        
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn.ochre {
+            background: #d4a574;
+            color: white;
+        }
+        .btn.ochre:hover {
+            background: #c29464;
+        }
+        .btn.secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .btn.secondary:hover {
+            background: #d0d0d0;
+        }
+        
+        /* Table styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            table-layout: fixed;
+        }
+        th {
+            background: #1a5f96;
+            color: white;
+            padding: 8px 4px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            border: 1px solid #155f91;
+            overflow: hidden;
+        }
+        #clienti-table th, #prodotti-table th {
+            background: transparent;
+            color: #1a1a1a;
+            border: none;
+            border-bottom: 2px solid #333;
+        }
+        .compact-form .form-group {
+            margin-bottom: 10px;
+        }
+        .compact-form label {
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+        .compact-form input {
+            padding: 6px;
+            font-size: 12px;
+        }
+        /* Più campi per riga nell'Anagrafica Fornitore (troppo lunga se un campo per riga come
+           per il Cliente): quanti ce ne stanno, in base allo spazio disponibile, con un minimo
+           di larghezza per non farli diventare illeggibili su schermi stretti. */
+        .anagrafica-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 4px 12px;
+        }
+        td {
+            padding: 6px 4px;
+            border: 1px solid #ddd;
+            font-size: 11px;
+            overflow: hidden;
+        }
+        td input {
+            width: 100%;
+            border: none;
+            font-size: 11px;
+            padding: 2px;
+            min-width: 0;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .content { overflow-x: hidden; }
+        .campo-extra {
+            display: none;
+            margin-bottom: 4px;
+        }
+        #righe-body.mostra-extra .campo-extra {
+            display: block;
+        }
+        .table-wrap {
+            width: 100%;
+            overflow: hidden;
+        }
+        #clienti-table, #prodotti-table {
+            table-layout: fixed;
+        }
+        #clienti-table td, #prodotti-table td,
+        #clienti-table th, #prodotti-table th {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        @media (max-width: 480px) {
+            .content { padding: 15px; }
+            th, td { font-size: 10px; padding: 4px 2px; }
+            #righe-body th:nth-child(1), #righe-body td:nth-child(1) { width: 34%; }
+            #righe-body th:nth-child(2), #righe-body td:nth-child(2) { width: 14%; }
+            #righe-body th:nth-child(3), #righe-body td:nth-child(3) { width: 18%; }
+            #righe-body th:nth-child(4), #righe-body td:nth-child(4) { width: 14%; }
+            #righe-body th:nth-child(5), #righe-body td:nth-child(5) { width: 20%; }
+            .row { grid-template-columns: 1fr; gap: 10px; }
+        }
+        
+        /* Preview styling */
+        #preview-container {
+            background: white;
+            border: 1px solid #ccc;
+            padding: 30px;
+            position: relative;
+            z-index: 0;
+            min-height: 600px;
+            font-family: 'Arial', sans-serif;
+            page-break-after: always;
+        }
+        @media (max-width: 480px) {
+            #preview-container { padding: 10px; }
+            .content { padding: 8px; }
+        }
+        
+        .preview-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+        }
+        
+        .preview-company {
+            text-align: left;
+        }
+        .preview-client {
+            text-align: right;
+        }
+        
+        .preview-company h3,
+        .preview-client h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #1a5f96;
+            text-wrap: balance;
+        }
+        /* Evita che un nome lungo vada a capo lasciando una sola lettera/parola orfana sull'ultima riga */
+        .nome-bilanciato {
+            display: inline-block;
+            text-wrap: balance;
+            max-width: 100%;
+        }
+        
+        .preview-company p,
+        .preview-client p {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #333;
+            font-weight: 700;
+        }
+        
+        .preview-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            padding: 10px;
+            background: transparent;
+            border: 1.5px solid #333;
+        }
+        
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            border: 2px solid #333;
+            table-layout: fixed;
+        }
+        
+        .preview-table th {
+            background: transparent;
+            color: #1a1a1a;
+            padding: 6px 2px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 10px;
+            border-bottom: 2px solid #333;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            overflow: hidden;
+        }
+        
+        .preview-table td {
+            padding: 6px 2px;
+            border: none;
+            border-bottom: 1px solid #ddd;
+            font-size: 10px;
+            text-align: center;
+            overflow-wrap: break-word;
+        }
+        
+        .preview-table tr:nth-child(even) {
+            background: transparent;
+        }
+        
+        .preview-totals {
+            margin-top: 20px;
+            text-align: right;
+            padding-right: 4px;
+        }
+        
+        .preview-totals p {
+            font-size: 13px;
+            margin: 4px 0;
+            font-weight: 700;
+            color: #000;
+        }
+        
+        .preview-totals .total {
+            font-size: 13px;
+            color: #000;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+        
+        @media (max-width: 480px) {
+            .preview-table th, .preview-table td { font-size: 8px; padding: 5px 1px; }
+        }
+        
+        .preview-notes {
+            position: absolute;
+            bottom: 8px;
+            left: 30px;
+            width: calc(100% - 60px);
+            height: 70px;
+            padding: 12px 15px;
+            border: 1px solid #ccc;
+            background: transparent;
+            font-family: 'Arial', sans-serif;
+            font-size: 11px;
+            line-height: 1.5;
+            text-align: left;
+            box-sizing: border-box;
+            resize: vertical;
+            cursor: text;
+        }
+        .preview-notes:focus {
+            outline: 2px solid #1a5f96;
+            border-color: #1a5f96;
+        }
+        @media (max-width: 480px) {
+            .preview-notes { left: 10px; width: calc(100% - 20px); }
+        }
+
+        .preview-logo-bottom {
+            position: absolute;
+            bottom: 130px;
+            width: calc(100% - 60px);
+            text-align: center;
+        }
+        
+        .preview-footer {
+            position: absolute;
+            bottom: 20px;
+            width: calc(100% - 60px);
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+        
+        .preview-logo {
+            max-width: 120px;
+            max-height: 80px;
+            margin: 20px auto;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(400px); }
+            to { transform: translateX(0); }
+        }
+        
+        .logo-preview {
+            max-width: 150px;
+            max-height: 100px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div style="position:fixed; bottom:2px; right:6px; font-size:9px; color:#bbb; z-index:9999; pointer-events:none;">v2026-09-19.1</div>
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="documento">Documento</button>
+            <button class="tab-btn" data-tab="anteprima">Anteprima</button>
+            <button class="tab-btn" data-tab="dati">Dati</button>
+        </div>
+        
+        <div class="content">
+            <!-- TAB: DOCUMENTO -->
+            <div class="tab-pane active" id="tab-documento">
+                <h2 style="margin-bottom: 20px; color: #1a5f96;">📝 Nuovo Documento</h2>
+                
+                <input type="file" id="logo-file" accept="image/jpeg,image/png" style="display:none">
+                <div class="actions">
+                    <button class="btn secondary" onclick="document.getElementById('logo-file').click()">Importa Logo (JPEG/PNG)</button>
+                </div>
+                <div id="logo-preview"></div>
+
+                <div class="row" style="margin-top: 12px;">
+                    <div class="form-group">
+                        <label>Posizionamento Logo</label>
+                        <select id="logo-position">
+                            <option value="top">Centro Pagina - Alto</option>
+                            <option value="bottom">Centro Pagina - Basso</option>
+                            <option value="center">Sfondo Centrale</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Dimensione Logo (larghezza)</label>
+                        <input type="range" id="logo-size" min="40" max="450" value="110">
+                    </div>
+                </div>
+                <div class="form-group" id="logo-watermark-opts">
+                    <label>Intensità (opacità)</label>
+                    <input type="range" id="logo-opacity" min="5" max="100" value="100">
+                </div>
+                <input type="hidden" id="logo-tint" value="none">
+                
+                <div class="form-group">
+                    <label>Tipo Documento</label>
+                    <select id="doc-tipo">
+                        <option value="Preventivo">Preventivo</option>
+                        <option value="Ordine">Ordine</option>
+                        <option value="Proforma">Proforma</option>
+                        <option value="Fattura">Fattura</option>
+                        <option value="DDT">Documento di Trasporto (DDT)</option>
+                    </select>
+                </div>
+
+                <div class="row" style="border: 1.5px solid #333; border-radius: 4px; padding: 10px; margin-bottom: 18px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Numero</label>
+                        <input type="number" id="doc-numero" placeholder="es. 001">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Data</label>
+                        <input type="date" id="doc-data" style="text-align:center;">
+                    </div>
+                </div>
+
+                <div id="ddt-dettagli" style="display:none; border: 1.5px solid #333; border-radius: 4px; padding: 10px; margin-bottom: 18px;">
+                    <p style="font-size: 11px; color: #888; margin: 0 0 10px;">Dati obbligatori per il Documento di Trasporto (DPR 472/1996)</p>
+                    <div class="form-group">
+                        <label>Causale del Trasporto</label>
+                        <input type="text" id="ddt-causale" placeholder="Es. Vendita" list="causali-datalist" autocomplete="off">
+                        <datalist id="causali-datalist">
+                            <option value="Vendita">
+                            <option value="Conto lavorazione">
+                            <option value="Reso">
+                            <option value="Omaggio">
+                            <option value="Visione/Prova">
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Aspetto Esteriore dei Beni</label>
+                        <input type="text" id="ddt-aspetto" placeholder="Es. N. 2 colli" list="aspetto-datalist" autocomplete="off">
+                        <datalist id="aspetto-datalist">
+                            <option value="Scatola/e">
+                            <option value="Collo/i">
+                            <option value="Pallet">
+                            <option value="Pacco/hi">
+                            <option value="Sfuso">
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Data e Ora Inizio Trasporto</label>
+                        <input type="datetime-local" id="ddt-data-ora">
+                    </div>
+                    <div class="form-group">
+                        <label>Vettore</label>
+                        <input type="text" id="ddt-vettore" placeholder="Es. Mittente, Destinatario, o ragione sociale del corriere">
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 30px; margin-bottom: 15px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 10px;">Cliente</h3>
+                <div class="form-group">
+                    <label>Ragione Sociale</label>
+                    <input type="text" id="cl-nome" placeholder="Inserisci..." list="clienti-datalist" autocomplete="off">
+                    <datalist id="clienti-datalist"></datalist>
+                </div>
+                <div class="actions">
+                    <button class="btn secondary" id="btn-crea-nuovo-cliente">Crea nuovo</button>
+                </div>
+
+                <div id="cliente-dettagli" style="display:none; margin-top:15px;">
+                    <div class="form-group">
+                        <label>Indirizzo PEC</label>
+                        <input type="text" id="cl-pec" placeholder="Indirizzo PEC">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="cl-email" placeholder="Email">
+                    </div>
+                    <div class="form-group">
+                        <label>Codice SDI</label>
+                        <input type="text" id="cl-sdi" placeholder="Codice Destinatario (privati) o Codice Univoco (Pubblica Amministrazione)">
+                    </div>
+                    <div class="form-group">
+                        <label>Partita IVA</label>
+                        <input type="text" id="cl-piva" placeholder="Partita IVA">
+                    </div>
+                    <div class="form-group">
+                        <label>Codice Fiscale</label>
+                        <input type="text" id="cl-cf" placeholder="Codice Fiscale">
+                    </div>
+                    <div class="form-group">
+                        <label>Indirizzo</label>
+                        <input type="text" id="cl-indirizzo" placeholder="Via e numero civico">
+                    </div>
+                    <div class="form-group">
+                        <label>Comune</label>
+                        <input type="text" id="cl-comune" placeholder="Comune">
+                    </div>
+                    <div class="form-group">
+                        <label>CAP</label>
+                        <input type="text" id="cl-cap" placeholder="CAP">
+                    </div>
+                    <div class="form-group">
+                        <label>Prov.</label>
+                        <input type="text" id="cl-provincia" placeholder="Es. RM" maxlength="2" style="text-transform:uppercase;">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefono</label>
+                        <input type="text" id="cl-tel" placeholder="Telefono">
+                    </div>
+                    <div class="form-group">
+                        <label>Cellulare</label>
+                        <input type="text" id="cl-cellulare" placeholder="Cellulare">
+                    </div>
+                    <div class="actions">
+                        <button class="btn secondary" id="btn-salva-cliente">Salva Cliente</button>
+                        <button class="btn secondary" id="btn-annulla-cliente">Annulla</button>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 30px; margin-bottom: 4px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 10px;">Beni e Servizi</h3>
+                <p style="font-size: 11px; color: #888; margin: 6px 0 10px;">↺ = ripristina i valori originali</p>
+                <datalist id="prodotti-datalist"></datalist>
+
+                <table id="righe-body">
+                    <thead>
+                        <tr>
+                            <th style="width: 34%; text-align:center;">Descrizione Bene<br>o Servizio</th>
+                            <th style="width: 13%; text-align:center;">Q.tà<br><button class="btn secondary" id="btn-reset-qta-tutti" title="Ripristina Q.tà per tutti gli elementi" style="padding:1px 5px; font-size:9px; margin-top:2px;">↺</button></th>
+                            <th style="width: 16%; text-align:center;">Prezzo<br><button class="btn secondary" id="btn-reset-prezzo-tutti" title="Ripristina Prezzo per tutti gli elementi" style="padding:1px 5px; font-size:9px; margin-top:2px;">↺</button></th>
+                            <th style="width: 13%; text-align:center;">Sc.%<br><button class="btn secondary" id="btn-reset-sconto-tutti" title="Ripristina Sconto per tutti gli elementi" style="padding:1px 5px; font-size:9px; margin-top:2px;">↺</button></th>
+                            <th style="width: 16%; text-align:center;">Importo</th>
+                            <th style="width: 8%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                
+                <div class="actions">
+                    <button class="btn secondary" id="btn-duplica-articolo">⧉ Duplica</button>
+                    <button class="btn secondary" id="btn-aggiungi-articolo">+ Aggiungi</button>
+                    <button class="btn secondary" id="btn-crea-nuovo-articolo">Crea nuovo</button>
+                </div>
+
+                <div class="actions" style="flex-wrap:wrap; margin-top:15px;">
+                    <input type="number" id="sconto-tutti-valore" placeholder="Sconto %" min="0" max="100" style="width:80px; padding:8px;">
+                    <button class="btn secondary" id="btn-applica-sconto-tutti">Applica a tutto</button>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border-left: 4px solid #1a5f96;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 13px;">
+                        <div><strong>Totale Sconti:</strong> <span id="tot-sconti" style="color: #1a5f96; font-weight: 700;">0,00 €</span></div>
+                        <div style="text-align: right;"><strong>Imponibile:</strong> <span id="tot-imponibile" style="color: #1a5f96; font-weight: 700;">0,00 €</span></div>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Note a Piè di Pagina</label>
+                    <textarea id="doc-note" placeholder="Es: Validità 30 giorni&#10;Pagamento a mezzo bonifico&#10;ecc."></textarea>
+                    <p style="font-size: 11px; color: #888; margin-top: 4px;">Puoi impostare un testo predefinito nella tab "Anteprima".</p>
+                </div>
+                
+                <div class="actions">
+                    <button class="btn ochre" id="btn-pdf">Genera PDF</button>
+                    <button class="btn secondary" id="btn-condividi-pdf">📤 Condividi PDF</button>
+                </div>
+            </div>
+            
+            <!-- TAB: ANTEPRIMA -->            <!-- TAB: ANTEPRIMA -->
+            <div class="tab-pane" id="tab-anteprima">
+                <h2 style="margin-bottom: 20px; color: #1a5f96;">👁️ Anteprima Documento</h2>
+                <div id="preview-container"></div>
+
+                <div class="actions" style="margin-top: 20px;">
+                    <button class="btn secondary" id="btn-salva-nota-default">Salva nota a piè di pagina come predefinita</button>
+                    <button class="btn secondary" id="btn-reset-nota-default" title="Cancella la nota predefinita salvata su questo dispositivo/browser e ricarica quella impostata nell'app">↺ Ripristina nota predefinita</button>
+                </div>
+            </div>
+
+            <!-- TAB: DATI -->
+            <div class="tab-pane" id="tab-dati">
+                <h2 style="margin-bottom: 15px; color: #1a5f96;">💾 Dati</h2>
+
+                <h3 style="color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 6px; margin-bottom: 10px;">🏢 Anagrafica Fornitore</h3>
+                <div class="compact-form">
+                    <div class="form-group">
+                        <label>Ragione Sociale</label>
+                        <input type="text" id="az-nome-input" placeholder="Nome azienda">
+                    </div>
+                    <div class="anagrafica-grid">
+                        <div class="form-group">
+                            <label>Indirizzo PEC</label>
+                            <input type="text" id="az-pec-input" placeholder="Indirizzo PEC">
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="az-email-input" placeholder="Email">
+                        </div>
+                        <div class="form-group">
+                            <label>Telefono</label>
+                            <input type="text" id="az-tel-input" placeholder="Telefono">
+                        </div>
+                        <div class="form-group">
+                            <label>Codice SDI</label>
+                            <input type="text" id="az-sdi-input" placeholder="Codice Destinatario">
+                        </div>
+                        <div class="form-group">
+                            <label>Partita IVA</label>
+                            <input type="text" id="az-piva-input" placeholder="Partita IVA">
+                        </div>
+                        <div class="form-group">
+                            <label>Codice Fiscale</label>
+                            <input type="text" id="az-cf-input" placeholder="Codice Fiscale">
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Indirizzo</label>
+                            <input type="text" id="az-indirizzo-input" placeholder="Via e numero civico">
+                        </div>
+                        <div class="form-group">
+                            <label>Comune</label>
+                            <input type="text" id="az-comune-input" placeholder="Comune">
+                        </div>
+                        <div class="form-group">
+                            <label>CAP</label>
+                            <input type="text" id="az-cap-input" placeholder="CAP">
+                        </div>
+                        <div class="form-group">
+                            <label>Prov.</label>
+                            <input type="text" id="az-provincia-input" placeholder="Es. RM" maxlength="2" style="text-transform:uppercase;">
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn ochre" id="btn-salva-fornitore">Salva Anagrafica</button>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 30px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 6px;">👥 Clienti</h3>
+                <input type="file" id="import-clienti-csv" accept=".csv,.txt,.xlsx" style="display:none">
+                <div class="actions">
+                    <button class="btn secondary" onclick="document.getElementById('import-clienti-csv').click()">Importa Clienti (CSV/XLSX)</button>
+                    <button class="btn secondary" id="btn-export-clienti-xlsx">Esporta Clienti (XLSX)</button>
+                    <button class="btn secondary" id="btn-svuota-clienti">Cancella Clienti</button>
+                </div>
+                <div id="lista-clienti" style="margin-top:10px; max-height:260px; overflow-y:auto;"></div>
+
+                <h3 style="margin-top: 30px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 6px;">📦 Beni e Servizi</h3>
+                <input type="file" id="import-prodotti-csv" accept=".csv,.txt,.xlsx" style="display:none">
+                <div class="actions">
+                    <button class="btn secondary" onclick="document.getElementById('import-prodotti-csv').click()">Importa Beni e Servizi (CSV/XLSX)</button>
+                    <button class="btn secondary" id="btn-export-prodotti-xlsx">Esporta Beni e Servizi (XLSX)</button>
+                    <button class="btn secondary" id="btn-svuota-prodotti">Cancella Beni e Servizi</button>
+                </div>
+                <div id="lista-prodotti" style="margin-top:10px; max-height:260px; overflow-y:auto;"></div>
+
+                <h3 style="margin-top: 30px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 6px;">📁 Archivio Documenti</h3>
+                <p style="font-size: 12px; color: #888; margin-bottom: 12px;">Ogni volta che generi un PDF, il documento viene salvato qui. Puoi riaprirlo così com'era, oppure usarlo come base per uno nuovo (stesso cliente ed elementi, numero e data aggiornati).</p>
+                <div class="form-group">
+                    <input type="text" id="archivio-ricerca" placeholder="Cerca per nome cliente...">
+                </div>
+                <div id="lista-archivio"></div>
+
+                <h3 style="margin-top: 30px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 6px;">Backup completo</h3>
+                <input type="file" id="import-file" accept=".json" style="display:none">
+                <div class="actions">
+                    <button class="btn secondary" onclick="document.getElementById('import-file').click()">Importa Backup (JSON)</button>
+                    <button class="btn secondary" id="btn-export">Esporta Backup (JSON)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== DATI AZIENDA =====
+        const AZIENDA_DEFAULT = {
+            'az-nome': 'ML DISTRIBUZIONE S.R.L.S.',
+            'az-indirizzo': 'Via Brenta 5',
+            'az-comune': 'San Cesareo',
+            'az-cap': '00040',
+            'az-provincia': 'RM',
+            'az-tel': '',
+            'az-email': '',
+            'az-pec': '',
+            'az-sdi': '',
+            'az-piva': '13102921007',
+            'az-cf': ''
+        };
+        const azienda = Object.assign({}, AZIENDA_DEFAULT, JSON.parse(localStorage.getItem('azienda') || '{}'));
+        // Compatibilità con dati salvati nel vecchio formato (campo unico "Città e CAP" az-localita)
+        if (azienda['az-comune'] === undefined && azienda['az-localita']) {
+            const legacyAz = splitLocalitaLegacy(azienda['az-localita']);
+            azienda['az-comune'] = legacyAz.comune;
+            azienda['az-cap'] = legacyAz.cap;
+        }
+
+        // ===== ANAGRAFICA FORNITORE: popolamento form e salvataggio =====
+        document.getElementById('az-nome-input').value = azienda['az-nome'] || '';
+        document.getElementById('az-pec-input').value = azienda['az-pec'] || '';
+        document.getElementById('az-email-input').value = azienda['az-email'] || '';
+        document.getElementById('az-tel-input').value = azienda['az-tel'] || '';
+        document.getElementById('az-sdi-input').value = azienda['az-sdi'] || '';
+        document.getElementById('az-piva-input').value = azienda['az-piva'] || '';
+        document.getElementById('az-cf-input').value = azienda['az-cf'] || '';
+        document.getElementById('az-indirizzo-input').value = azienda['az-indirizzo'] || '';
+        document.getElementById('az-comune-input').value = azienda['az-comune'] || '';
+        document.getElementById('az-cap-input').value = azienda['az-cap'] || '';
+        document.getElementById('az-provincia-input').value = azienda['az-provincia'] || '';
+
+        document.getElementById('btn-salva-fornitore').addEventListener('click', () => {
+            azienda['az-nome'] = document.getElementById('az-nome-input').value;
+            azienda['az-pec'] = document.getElementById('az-pec-input').value;
+            azienda['az-sdi'] = document.getElementById('az-sdi-input').value;
+            azienda['az-comune'] = document.getElementById('az-comune-input').value;
+            azienda['az-cap'] = document.getElementById('az-cap-input').value;
+            azienda['az-provincia'] = document.getElementById('az-provincia-input').value;
+            delete azienda['az-localita'];
+            azienda['az-indirizzo'] = document.getElementById('az-indirizzo-input').value;
+            azienda['az-tel'] = document.getElementById('az-tel-input').value;
+            azienda['az-email'] = document.getElementById('az-email-input').value;
+            azienda['az-piva'] = document.getElementById('az-piva-input').value;
+            azienda['az-cf'] = document.getElementById('az-cf-input').value;
+            localStorage.setItem('azienda', JSON.stringify(azienda));
+            toast('Anagrafica fornitore salvata');
+        });
+
+        // ===== UI TABS =====
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+                btn.classList.add('active');
+                if (tabName === 'anteprima') renderAnteprima();
+            });
+        });
+
+        // ===== TOAST =====
+        function toast(msg) {
+            const el = document.createElement('div');
+            el.className = 'toast';
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        }
+
+        // ===== TASTO "INDIETRO" (fisico/gesto Android): invece di chiudere subito l'app, =====
+        // prima annulla un eventuale pannello aperto (es. nuovo cliente); se non c'è nulla
+        // da chiudere, chiede una seconda pressione entro 2 secondi prima di uscire davvero.
+        let backPremutoUnaVolta = false;
+        history.pushState({ app: true }, '');
+        window.addEventListener('popstate', () => {
+            if (typeof chiudiPannelloCliente === 'function' && chiudiPannelloCliente()) {
+                history.pushState({ app: true }, '');
+                return;
+            }
+            if (backPremutoUnaVolta) return; // seconda pressione: lascia uscire normalmente
+            backPremutoUnaVolta = true;
+            toast('Premi di nuovo "Indietro" per uscire');
+            history.pushState({ app: true }, '');
+            setTimeout(() => { backPremutoUnaVolta = false; }, 2000);
+        });
+
+        // ===== "X" per svuotare in un tocco i campi testuali (lettere/parole, non i numeri) =====
+        function addClearButton(input) {
+            if (!input || input.dataset.clearable) return;
+            input.dataset.clearable = '1';
+            const wrap = document.createElement('span');
+            wrap.style.cssText = 'position:relative; display:block;';
+            input.parentNode.insertBefore(wrap, input);
+            wrap.appendChild(input);
+            input.style.paddingRight = '26px';
+            input.style.boxSizing = 'border-box';
+            const btn = document.createElement('span');
+            btn.textContent = '✕';
+            btn.setAttribute('role', 'button');
+            btn.setAttribute('aria-label', 'Cancella');
+            btn.style.cssText = 'position:absolute; right:6px; top:50%; transform:translateY(-50%); cursor:pointer; color:#999; font-size:13px; font-weight:bold; display:none; user-select:none; padding:4px; line-height:1;';
+            wrap.appendChild(btn);
+            function aggiorna() { btn.style.display = input.value ? 'block' : 'none'; }
+            input.addEventListener('input', aggiorna);
+            aggiorna();
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.focus();
+                aggiorna();
+            });
+        }
+        function aggiungiPulsantiCancella(root) {
+            (root || document).querySelectorAll('input[type="text"], input[type="email"]').forEach(addClearButton);
+        }
+        aggiungiPulsantiCancella(document);
+
+        // ===== LOGO =====
+        let logoData = null;
+        document.getElementById('logo-file').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                logoData = evt.target.result;
+                const img = document.createElement('img');
+                img.src = logoData;
+                img.className = 'logo-preview';
+                const preview = document.getElementById('logo-preview');
+                preview.innerHTML = '';
+                preview.appendChild(img);
+                toast('Logo caricato');
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('logo-position').addEventListener('change', (e) => {
+            const pos = e.target.value;
+            const sizeInput = document.getElementById('logo-size');
+            const opacityInput = document.getElementById('logo-opacity');
+            if (pos === 'center') { sizeInput.value = 380; opacityInput.value = 15; }
+            else if (pos === 'bottom') { sizeInput.value = 90; opacityInput.value = 100; }
+            else { sizeInput.value = 110; opacityInput.value = 100; }
+        });
+
+        // ===== TENDINA DI SUGGERIMENTI PERSONALIZZATA (non usa <datalist>, funziona su ogni browser/dispositivo) =====
+        let acBox = null;
+        function ensureAcBox() {
+            if (!acBox) {
+                acBox = document.createElement('div');
+                acBox.style.position = 'absolute';
+                acBox.style.zIndex = '9999';
+                acBox.style.background = '#fff';
+                acBox.style.border = '1px solid #1a5f96';
+                acBox.style.maxHeight = '180px';
+                acBox.style.overflowY = 'auto';
+                acBox.style.fontSize = '13px';
+                acBox.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
+                acBox.style.display = 'none';
+                document.body.appendChild(acBox);
+            }
+            return acBox;
+        }
+        function hideAcBox() { if (acBox) acBox.style.display = 'none'; }
+
+        function attachAutocomplete(inputEl, getMatches, onSelect) {
+            inputEl.addEventListener('input', () => {
+                const query = inputEl.value.trim().toLowerCase();
+                const box = ensureAcBox();
+                if (query.length < 3) { hideAcBox(); return; }
+                const matches = getMatches(query);
+                if (matches.length === 0) { hideAcBox(); return; }
+                box.innerHTML = '';
+                matches.slice(0, 25).forEach(m => {
+                    const item = document.createElement('div');
+                    item.textContent = m.label;
+                    item.style.padding = '9px 12px';
+                    item.style.cursor = 'pointer';
+                    item.style.borderBottom = '1px solid #eee';
+                    item.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        onSelect(m.data);
+                        hideAcBox();
+                    });
+                    box.appendChild(item);
+                });
+                const rect = inputEl.getBoundingClientRect();
+                box.style.left = (rect.left + window.scrollX) + 'px';
+                box.style.top = (rect.bottom + window.scrollY) + 'px';
+                box.style.width = Math.max(rect.width, 180) + 'px';
+                box.style.display = 'block';
+            });
+            inputEl.addEventListener('blur', () => { setTimeout(hideAcBox, 150); });
+        }
+
+        // ===== RIGHE ARTICOLI =====
+        const righeBody = document.querySelector('#righe-body tbody');
+
+        // Seleziona tutto il contenuto del campo quando riceve il focus, così scrivendo si
+        // sostituisce subito il valore invece di dover cancellare a mano. Usato SOLO sui campi
+        // numerici della riga articolo (Q.tà, Prezzo, Sc.%) — mai sui campi testuali (nomi,
+        // P.IVA, codice fiscale, ecc.), su richiesta esplicita dell'utente.
+        function bindSelectOnFocus(el) {
+            const selezionaTutto = () => { try { el.select(); } catch (e) {} };
+            el.addEventListener('focus', () => setTimeout(selezionaTutto, 0));
+            el.addEventListener('click', () => setTimeout(selezionaTutto, 0));
+        }
+
+        // Costruisce una riga articolo vuota, già collegata (autocomplete, ricalcolo,
+        // pulsanti +/- quantità, reset, duplica) ma senza inserirla nella tabella.
+        function creaRigaVuota() {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <input type="text" class="r-brand campo-extra" placeholder="Brand" style="width:100%; border:none; text-align:center;">
+                    <input type="text" class="r-linea campo-extra" placeholder="Linea" style="width:100%; border:none; text-align:center;">
+                    <input type="text" class="r-desc" placeholder="Inserisci..." list="prodotti-datalist" autocomplete="off" style="width:100%; border:none; text-align:center;">
+                </td>
+                <td>
+                    <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
+                        <button type="button" class="btn secondary r-qta-meno" style="padding:1px 5px; font-size:12px; line-height:1.4; min-width:20px;">−</button>
+                        <input type="number" class="r-qta" value="1" style="width:32px; border:none; text-align:center; padding:0;">
+                        <button type="button" class="btn secondary r-qta-piu" style="padding:1px 5px; font-size:12px; line-height:1.4; min-width:20px;">+</button>
+                    </div>
+                </td>
+                <td><input type="number" class="r-prezzo" value="0" step="0.01" style="width:100%; border:none; text-align:center;"></td>
+                <td><input type="number" class="r-sconto" value="0" min="0" max="100" style="width:100%; border:none; text-align:center;"></td>
+                <td><input type="number" class="r-importo" value="0" step="0.01" style="width:100%; border:none; text-align:center; font-weight:600;"></td>
+                <td style="text-align:center; white-space:nowrap;"></td>
+            `;
+
+            // Q.tà, Prezzo e Sconto ricalcolano sempre l'Importo in automatico, e "sbloccano"
+            // l'eventuale Importo scritto a mano in precedenza (si torna al calcolo automatico).
+            ['r-qta', 'r-prezzo', 'r-sconto'].forEach(cls => {
+                tr.querySelector('.' + cls).addEventListener('input', () => {
+                    delete tr.dataset.importoManuale;
+                    recalcola();
+                });
+                bindSelectOnFocus(tr.querySelector('.' + cls));
+            });
+            bindProdottoAutocomplete(tr.querySelector('.r-desc'));
+            addClearButton(tr.querySelector('.r-brand'));
+            addClearButton(tr.querySelector('.r-linea'));
+            addClearButton(tr.querySelector('.r-desc'));
+
+            // L'Importo è comunque modificabile a mano: se lo si tocca direttamente, resta quello
+            // scritto (non viene più ricalcolato) finché non si cambia di nuovo Q.tà/Prezzo/Sconto.
+            const importoInput = tr.querySelector('.r-importo');
+            importoInput.addEventListener('input', () => {
+                tr.dataset.importoManuale = '1';
+                recalcola();
+            });
+            bindSelectOnFocus(importoInput);
+
+            const qtaInput = tr.querySelector('.r-qta');
+            tr.querySelector('.r-qta-meno').addEventListener('click', () => {
+                qtaInput.value = Math.max(0, (parseFloat(qtaInput.value) || 0) - 1);
+                delete tr.dataset.importoManuale;
+                recalcola();
+            });
+            tr.querySelector('.r-qta-piu').addEventListener('click', () => {
+                qtaInput.value = (parseFloat(qtaInput.value) || 0) + 1;
+                delete tr.dataset.importoManuale;
+                recalcola();
+            });
+
+            const btnReset = document.createElement('button');
+            btnReset.className = 'btn secondary';
+            btnReset.style = 'padding:2px 6px; font-size:11px;';
+            btnReset.textContent = '↺';
+            btnReset.title = 'Ripristina Q.tà, Prezzo e Sconto di questo articolo';
+            btnReset.addEventListener('click', () => resetRiga(tr));
+            tr.children[5].appendChild(btnReset);
+
+            return tr;
+        }
+
+        function addRiga() {
+            const tr = creaRigaVuota();
+            righeBody.appendChild(tr);
+            recalcola();
+        }
+
+        // Duplica una riga articolo: crea una riga identica (stessi Brand/Linea/Descrizione/
+        // Q.tà/Prezzo/Sconto) subito sotto quella di partenza, pronta per piccole modifiche.
+        function duplicaRiga(sorgente) {
+            const tr = creaRigaVuota();
+            sorgente.after(tr);
+            tr.querySelector('.r-brand').value = sorgente.querySelector('.r-brand').value;
+            tr.querySelector('.r-linea').value = sorgente.querySelector('.r-linea').value;
+            tr.querySelector('.r-desc').value = sorgente.querySelector('.r-desc').value;
+            tr.querySelector('.r-qta').value = sorgente.querySelector('.r-qta').value;
+            tr.querySelector('.r-prezzo').value = sorgente.querySelector('.r-prezzo').value;
+            tr.querySelector('.r-sconto').value = sorgente.querySelector('.r-sconto').value;
+            if (sorgente.dataset.importoManuale === '1') {
+                tr.dataset.importoManuale = '1';
+                tr.querySelector('.r-importo').value = sorgente.querySelector('.r-importo').value;
+            }
+            recalcola();
+            toast('Articolo duplicato');
+        }
+
+        // Il pulsante unico "Duplica articolo" sopra la tabella duplica sempre l'ultimo articolo
+        // della lista (il più semplice e prevedibile: di solito è quello appena inserito).
+        document.getElementById('btn-duplica-articolo').addEventListener('click', () => {
+            try {
+                const sorgente = righeBody.lastElementChild;
+                if (!sorgente) { toast('Nessun articolo da duplicare, aggiungine prima uno'); return; }
+                duplicaRiga(sorgente);
+            } catch (err) {
+                toast('Errore nella duplicazione: ' + err.message);
+            }
+        });
+
+        // Ripristina Q.tà (a 1), Prezzo e Sconto (dal catalogo, se il nome corrisponde) di UNA riga
+        function resetRiga(tr) {
+            const desc = (tr.querySelector('.r-desc').value || '').toLowerCase();
+            const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
+            const match = prodotti.find(p => (p.desc || '').toLowerCase() === desc);
+            tr.querySelector('.r-qta').value = match ? (match.qta || 1) : 1;
+            if (match) {
+                tr.querySelector('.r-prezzo').value = match.prezzo;
+                tr.querySelector('.r-sconto').value = match.sconto;
+            }
+            delete tr.dataset.importoManuale;
+            recalcola();
+        }
+
+        // Applica lo stesso sconto % a tutti gli elementi in un colpo solo
+        document.getElementById('btn-applica-sconto-tutti').addEventListener('click', () => {
+            const valore = document.getElementById('sconto-tutti-valore').value;
+            if (valore === '') { toast('Inserisci un valore di sconto'); return; }
+            righeBody.querySelectorAll('tr').forEach(tr => {
+                tr.querySelector('.r-sconto').value = valore;
+                delete tr.dataset.importoManuale;
+            });
+            recalcola();
+            toast('Sconto applicato a tutti gli elementi');
+        });
+
+        // Reset di massa: Q.tà, Sconto e Prezzo ripristinati dal catalogo, dove il nome corrisponde
+        document.getElementById('btn-reset-qta-tutti').addEventListener('click', () => {
+            const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
+            righeBody.querySelectorAll('tr').forEach(tr => {
+                const desc = (tr.querySelector('.r-desc').value || '').toLowerCase();
+                const match = prodotti.find(p => (p.desc || '').toLowerCase() === desc);
+                tr.querySelector('.r-qta').value = match ? (match.qta || 1) : 1;
+                delete tr.dataset.importoManuale;
+            });
+            recalcola();
+            toast('Q.tà ripristinata per tutti gli elementi');
+        });
+        document.getElementById('btn-reset-sconto-tutti').addEventListener('click', () => {
+            const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
+            righeBody.querySelectorAll('tr').forEach(tr => {
+                const desc = (tr.querySelector('.r-desc').value || '').toLowerCase();
+                const match = prodotti.find(p => (p.desc || '').toLowerCase() === desc);
+                if (match) tr.querySelector('.r-sconto').value = match.sconto;
+                delete tr.dataset.importoManuale;
+            });
+            recalcola();
+            toast('Sconto ripristinato dal catalogo per tutti gli elementi');
+        });
+        document.getElementById('btn-reset-prezzo-tutti').addEventListener('click', () => {
+            const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
+            righeBody.querySelectorAll('tr').forEach(tr => {
+                const desc = (tr.querySelector('.r-desc').value || '').toLowerCase();
+                const match = prodotti.find(p => (p.desc || '').toLowerCase() === desc);
+                if (match) tr.querySelector('.r-prezzo').value = match.prezzo;
+                delete tr.dataset.importoManuale;
+            });
+            recalcola();
+            toast('Prezzo ripristinato dal catalogo per tutti gli elementi');
+        });
+
+        function recalcola() {
+            let totSconti = 0, totImponibile = 0;
+            righeBody.querySelectorAll('tr').forEach(tr => {
+                const qta = parseFloat(tr.querySelector('.r-qta').value || 0);
+                const prezzo = parseFloat(tr.querySelector('.r-prezzo').value || 0);
+                const sconto = parseFloat(tr.querySelector('.r-sconto').value || 0);
+                const importoInput = tr.querySelector('.r-importo');
+                const lotto = qta * prezzo;
+                let importo;
+                if (tr.dataset.importoManuale === '1') {
+                    // Importo scritto a mano per questa riga: lo rispettiamo così com'è, non lo
+                    // ricalcoliamo da Q.tà/Prezzo/Sconto finché quei campi non vengono ritoccati.
+                    importo = parseFloat(importoInput.value || 0);
+                } else {
+                    importo = lotto - (lotto * sconto / 100);
+                    importoInput.value = importo.toFixed(2);
+                }
+                totSconti += (lotto - importo);
+                totImponibile += importo;
+            });
+            document.getElementById('tot-sconti').textContent = totSconti.toFixed(2) + ' €';
+            document.getElementById('tot-imponibile').textContent = totImponibile.toFixed(2) + ' €';
+        }
+
+        document.getElementById('btn-aggiungi-articolo').addEventListener('click', addRiga);
+        
+        // Data oggi
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('doc-data').value = today;
+
+        // ===== NUMERAZIONE AUTOMATICA DOCUMENTI =====
+        // Un contatore separato per ogni tipo E per ogni anno (Preventivo/Ordine/Proforma/Fattura,
+        // es. "Fattura-2026"): appena si sceglie il tipo o si cambia la data, il campo Numero viene
+        // precompilato con il numero successivo a quello più alto usato finora per quel tipo in
+        // quell'anno — così la numerazione riparte da 1 a ogni nuovo anno, come vuole la prassi
+        // fiscale. Resta comunque modificabile a mano: se lo cambi tu, alla generazione del PDF il
+        // contatore si aggiorna a quel valore.
+        function leggiContatoriDocumenti() {
+            return JSON.parse(localStorage.getItem('contatoriDocumenti') || '{}');
+        }
+        function annoDocumentoCorrente() {
+            const val = document.getElementById('doc-data').value;
+            return val ? new Date(val).getFullYear() : new Date().getFullYear();
+        }
+        function chiaveContatore(tipo, anno) {
+            return tipo + '-' + anno;
+        }
+        function prossimoNumeroDocumento(tipo) {
+            const contatori = leggiContatoriDocumenti();
+            const chiave = chiaveContatore(tipo, annoDocumentoCorrente());
+            return (parseInt(contatori[chiave]) || 0) + 1;
+        }
+        function aggiornaNumeroSuggerito() {
+            const tipo = document.getElementById('doc-tipo').value;
+            document.getElementById('doc-numero').value = prossimoNumeroDocumento(tipo);
+        }
+        // Mostra i campi obbligatori del DDT (causale, aspetto esteriore, data/ora trasporto,
+        // vettore) solo quando il tipo documento selezionato è "DDT", lasciando gli altri tipi
+        // (Preventivo/Ordine/Proforma/Fattura) invariati.
+        function aggiornaVisibilitaDdt() {
+            const tipo = document.getElementById('doc-tipo').value;
+            document.getElementById('ddt-dettagli').style.display = (tipo === 'DDT') ? 'block' : 'none';
+        }
+        function registraNumeroDocumentoUsato(tipo, numero) {
+            const n = parseInt(numero);
+            if (isNaN(n)) return;
+            const contatori = leggiContatoriDocumenti();
+            const chiave = chiaveContatore(tipo, annoDocumentoCorrente());
+            contatori[chiave] = Math.max(parseInt(contatori[chiave]) || 0, n);
+            localStorage.setItem('contatoriDocumenti', JSON.stringify(contatori));
+        }
+        // Migrazione una tantum: i contatori salvati prima dell'introduzione dell'anno erano
+        // chiavi semplici (es. "Preventivo"). Li spostiamo sotto l'anno corrente così la
+        // numerazione prosegue da dove era arrivata invece di ripartire da 1.
+        (function migraContatoriConAnno() {
+            const contatori = leggiContatoriDocumenti();
+            const annoCorrente = new Date().getFullYear();
+            let cambiato = false;
+            Object.keys(contatori).forEach(chiave => {
+                if (!/-\d{4}$/.test(chiave)) {
+                    const nuovaChiave = chiaveContatore(chiave, annoCorrente);
+                    contatori[nuovaChiave] = Math.max(parseInt(contatori[nuovaChiave]) || 0, parseInt(contatori[chiave]) || 0);
+                    delete contatori[chiave];
+                    cambiato = true;
+                }
+            });
+            if (cambiato) localStorage.setItem('contatoriDocumenti', JSON.stringify(contatori));
+        })();
+        document.getElementById('doc-tipo').addEventListener('change', aggiornaNumeroSuggerito);
+        document.getElementById('doc-data').addEventListener('change', aggiornaNumeroSuggerito);
+        document.getElementById('doc-tipo').addEventListener('change', aggiornaVisibilitaDdt);
+        aggiornaNumeroSuggerito();
+        aggiornaVisibilitaDdt();
+
+        // ===== ANTEPRIMA DOCUMENTO =====
+        function renderAnteprima() {
+            const container = document.getElementById('preview-container');
+            const tipo = document.getElementById('doc-tipo').value;
+            const numero = document.getElementById('doc-numero').value || '-';
+            const numeroConAnno = numero + '/' + annoDocumentoCorrente();
+            const data = document.getElementById('doc-data').value ? new Date(document.getElementById('doc-data').value).toLocaleDateString('it-IT') : '';
+            const clienteNome = document.getElementById('cl-nome').value;
+            const clienteIndirizzo = document.getElementById('cl-indirizzo').value;
+            const clienteLocalita = formattaIndirizzoLocalita(
+                document.getElementById('cl-comune').value,
+                document.getElementById('cl-cap').value,
+                document.getElementById('cl-provincia').value
+            );
+            const clientePiva = document.getElementById('cl-piva').value;
+            const clienteCf = document.getElementById('cl-cf').value;
+            const logoPos = document.getElementById('logo-position').value;
+            const logoOpacity = parseInt(document.getElementById('logo-opacity').value, 10) / 100;
+            const logoTint = document.getElementById('logo-tint').value;
+            const logoSize = parseInt(document.getElementById('logo-size').value, 10);
+            const note = document.getElementById('doc-note').value;
+            
+            let html = '';
+            
+            if (logoPos === 'center' && logoData) {
+                html += `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:-1; opacity:${logoOpacity}; ${logoTint !== 'none' ? 'filter: grayscale(1) brightness(1.1);' : ''} pointer-events:none;">
+                    <img src="${logoData}" style="width:${logoSize}px; max-width:80%;">
+                </div>`;
+            }
+            
+            html += `
+                <div class="preview-header" style="position:relative;">
+                    ${(logoPos === 'top' && logoData) ? `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:-1; opacity:${logoOpacity}; ${logoTint !== 'none' ? 'filter: grayscale(1) brightness(1.1);' : ''} pointer-events:none;"><img src="${logoData}" style="width:${logoSize}px; max-width:70vw;"></div>` : ''}
+                    <div class="preview-company">
+                        <h3>${azienda['az-nome']}</h3>
+                        <p>${azienda['az-indirizzo']}<br>${formattaIndirizzoLocalita(azienda['az-comune'], azienda['az-cap'], azienda['az-provincia'])}<br>Tel: ${azienda['az-tel']}<br>P.IVA: ${azienda['az-piva']}${azienda['az-cf'] ? '<br>C.F.: ' + azienda['az-cf'] : ''}</p>
+                    </div>
+                    <div class="preview-client">
+                        <h3>Cliente</h3>
+                        <p><span class="nome-bilanciato">${clienteNome}</span><br>${clienteIndirizzo}<br>${clienteLocalita}<br>P.IVA: ${clientePiva}${clienteCf ? '<br>C.F.: ' + clienteCf : ''}</p>
+                    </div>
+                </div>
+                
+                <div class="preview-info">
+                    <div><strong>${tipo === 'DDT' ? 'Documento di Trasporto' : tipo}</strong> N° ${numeroConAnno}</div>
+                    <div style="text-align:right;"><strong>Data: ${data}</strong></div>
+                </div>
+                ${tipo === 'DDT' ? `
+                <div style="border:1.5px solid #333; border-radius:4px; padding:8px 10px; margin-bottom:14px; font-size:12px;">
+                    <p style="margin:2px 0;"><strong>Causale del Trasporto:</strong> ${document.getElementById('ddt-causale').value}</p>
+                    <p style="margin:2px 0;"><strong>Aspetto Esteriore dei Beni:</strong> ${document.getElementById('ddt-aspetto').value}</p>
+                    <p style="margin:2px 0;"><strong>Data/Ora Inizio Trasporto:</strong> ${formattaDataOraDdt(document.getElementById('ddt-data-ora').value)}</p>
+                    <p style="margin:2px 0;"><strong>Vettore:</strong> ${document.getElementById('ddt-vettore').value}</p>
+                </div>` : ''}
+
+                <table class="preview-table">
+                    <thead>
+                        <tr>
+                            <th style="width:13%;">Brand</th>
+                            <th style="width:13%;">Linea</th>
+                            <th style="width:27%;">Descrizione Bene<br>o Servizio</th>
+                            <th style="width:10%;">Q.tà</th>
+                            <th style="width:13%;">Prezzo</th>
+                            <th style="width:10%;">Sc.%</th>
+                            <th style="width:14%;">Importo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            righeBody.querySelectorAll('tr').forEach(tr => {
+                const brand = tr.querySelector('.r-brand').value;
+                const linea = tr.querySelector('.r-linea').value;
+                const desc = tr.querySelector('.r-desc').value;
+                const qta = tr.querySelector('.r-qta').value;
+                const prezzo = tr.querySelector('.r-prezzo').value;
+                const sconto = tr.querySelector('.r-sconto').value;
+                const importo = parseFloat(tr.querySelector('.r-importo').value || 0).toFixed(2) + ' €';
+                html += `<tr><td>${brand}</td><td>${linea}</td><td>${desc}</td><td>${qta}</td><td>${prezzo}</td><td>${sconto}</td><td style="font-weight:600;">${importo}</td></tr>`;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                
+                <div class="preview-totals">
+                    <p>Totale Sconti: ${document.getElementById('tot-sconti').textContent}</p>
+                    <p class="total">Imponibile: ${document.getElementById('tot-imponibile').textContent}</p>
+                </div>
+                
+                <textarea class="preview-notes" id="preview-notes-input"></textarea>
+            `;
+            
+            if (logoPos === 'bottom' && logoData) {
+                html += `<div class="preview-logo-bottom"><img src="${logoData}" style="width:${logoSize}px; max-width:100%; height:auto; opacity:${logoOpacity}; ${logoTint !== 'none' ? 'filter: grayscale(1) brightness(1.1);' : ''}"></div>`;
+            }
+            
+            container.innerHTML = html;
+
+            const notesInput = document.getElementById('preview-notes-input');
+            notesInput.value = note;
+            notesInput.addEventListener('input', () => {
+                document.getElementById('doc-note').value = notesInput.value;
+            });
+        }
+
+        // ===== MOTORE PDF INTERNO (nessuna libreria esterna, nessun pannello di stampa) =====
+        function toWinAnsiByteString(str) {
+            let out = '';
+            for (const ch of String(str)) {
+                const code = ch.codePointAt(0);
+                if (code === 0x20AC) out += String.fromCharCode(0x80); // simbolo €
+                else if (code < 256) out += String.fromCharCode(code);
+                else out += '?';
+            }
+            return out;
+        }
+        function escapePDFText(s) {
+            return toWinAnsiByteString(s).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+        }
+        // Larghezze reali dei caratteri Helvetica/Helvetica-Bold (unità 1/1000 em) — per allineamento a destra preciso
+        const HELV_WIDTHS = {32:278,33:278,34:355,35:556,36:556,37:889,38:667,39:191,40:333,41:333,42:389,43:584,44:278,45:333,46:278,47:278,48:556,49:556,50:556,51:556,52:556,53:556,54:556,55:556,56:556,57:556,58:278,59:278,60:584,61:584,62:584,63:556,64:1015,65:667,66:667,67:722,68:722,69:667,70:611,71:778,72:722,73:278,74:500,75:667,76:556,77:833,78:722,79:778,80:667,81:778,82:722,83:667,84:611,85:722,86:667,87:944,88:667,89:667,90:611,91:278,92:278,93:278,94:469,95:556,96:333,97:556,98:556,99:500,100:556,101:556,102:278,103:556,104:556,105:222,106:222,107:500,108:222,109:833,110:556,111:556,112:556,113:556,114:333,115:500,116:278,117:556,118:500,119:722,120:500,121:500,122:500,123:334,124:260,125:334,126:584};
+        const HELVB_WIDTHS = {32:278,33:333,34:474,35:556,36:556,37:889,38:722,39:238,40:333,41:333,42:389,43:584,44:278,45:333,46:278,47:278,48:556,49:556,50:556,51:556,52:556,53:556,54:556,55:556,56:556,57:556,58:333,59:333,60:584,61:584,62:584,63:611,64:975,65:722,66:722,67:722,68:722,69:667,70:611,71:778,72:722,73:278,74:556,75:722,76:611,77:833,78:722,79:778,80:667,81:778,82:722,83:667,84:611,85:722,86:667,87:944,88:667,89:667,90:611,91:333,92:278,93:333,94:584,95:556,96:333,97:556,98:611,99:556,100:611,101:556,102:333,103:611,104:611,105:278,106:278,107:556,108:278,109:889,110:611,111:611,112:611,113:611,114:389,115:556,116:333,117:611,118:556,119:778,120:556,121:556,122:500,123:389,124:280,125:389,126:584};
+        function approxWidth(text, size, bold) {
+            const table = bold ? HELVB_WIDTHS : HELV_WIDTHS;
+            const defaultW = bold ? 611 : 556;
+            let total = 0;
+            for (const ch of String(text)) {
+                const code = ch.codePointAt(0);
+                total += (code >= 32 && code <= 126) ? (table[code] || defaultW) : defaultW;
+            }
+            return total * size / 1000;
+        }
+
+        async function getLogoJpegBytes(tint) {
+            if (!logoData) return null;
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const maxW = 500;
+                    const scale = Math.min(1, maxW / img.width);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    if (tint && tint !== 'none') {
+                        ctx.globalCompositeOperation = 'multiply';
+                        ctx.fillStyle = tint;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.globalCompositeOperation = 'source-over';
+                    }
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    const base64 = dataUrl.split(',')[1];
+                    const binary = atob(base64);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    resolve({ bytes, width: canvas.width, height: canvas.height });
+                };
+                img.onerror = () => resolve(null);
+                img.src = logoData;
+            });
+        }
+
+        // Logo pre-elaborato (tinta colore applicata) come canvas, pronto per essere disegnato
+        async function getTintedLogoCanvas(tint) {
+            if (!logoData) return null;
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const c = document.createElement('canvas');
+                    c.width = img.width; c.height = img.height;
+                    const cx = c.getContext('2d');
+                    cx.drawImage(img, 0, 0);
+                    if (tint && tint !== 'none') {
+                        cx.globalCompositeOperation = 'multiply';
+                        cx.fillStyle = tint;
+                        cx.fillRect(0, 0, c.width, c.height);
+                        cx.globalCompositeOperation = 'source-over';
+                    }
+                    resolve(c);
+                };
+                img.onerror = () => resolve(null);
+                img.src = logoData;
+            });
+        }
+
+        // Il documento viene disegnato interamente su un canvas (stesso motore di rendering del
+        // browser usato per l'anteprima: l'allineamento del testo è quindi sempre nativo e preciso,
+        // indipendentemente da quale font sostituisca "Helvetica" il lettore PDF sul dispositivo)
+        // e poi incorporato come singola immagine nel PDF finale.
+        async function buildPdfBytes() {
+            const tipo = document.getElementById('doc-tipo').value;
+            const numero = document.getElementById('doc-numero').value || '-';
+            const numeroConAnno = numero + '/' + annoDocumentoCorrente();
+            registraNumeroDocumentoUsato(tipo, numero);
+            const dataVal = document.getElementById('doc-data').value;
+            const dataFmt = dataVal ? new Date(dataVal).toLocaleDateString('it-IT') : '';
+            const clienteNome = document.getElementById('cl-nome').value;
+            const clienteIndirizzo = document.getElementById('cl-indirizzo').value;
+            const clienteLocalita = formattaIndirizzoLocalita(
+                document.getElementById('cl-comune').value,
+                document.getElementById('cl-cap').value,
+                document.getElementById('cl-provincia').value
+            );
+            const clientePiva = document.getElementById('cl-piva').value;
+            const clienteCf = document.getElementById('cl-cf').value;
+            const logoPos = document.getElementById('logo-position').value;
+            const logoTint = document.getElementById('logo-tint').value;
+            const logoOpacity = parseInt(document.getElementById('logo-opacity').value, 10) / 100;
+            const logoSize = parseInt(document.getElementById('logo-size').value, 10);
+            const noteRaw = document.getElementById('doc-note').value;
+            const note = noteRaw.trim() === '' ? [] : noteRaw.split(String.fromCharCode(10));
+
+            const logoCanvas = await getTintedLogoCanvas(logoTint);
+
+            const PAGE_W = 595, PAGE_H = 842, MX = 40, RIGHT_X = 555, FRAME_MARGIN = 22;
+            const SCALE = 2.5; // risoluzione più alta per un PDF nitido
+            const px = v => v * SCALE;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = px(PAGE_W);
+            canvas.height = px(PAGE_H);
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            function drawLogo(cx, cy, sizeW, opacity) {
+                if (!logoCanvas) return;
+                const w = sizeW, h = (logoCanvas.height / logoCanvas.width) * sizeW;
+                ctx.save();
+                ctx.globalAlpha = opacity;
+                ctx.drawImage(logoCanvas, px(cx - w / 2), px(cy - h / 2), px(w), px(h));
+                ctx.restore();
+                return h;
+            }
+
+            // Cornice esterna
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = px(1.1);
+            ctx.strokeRect(px(FRAME_MARGIN), px(FRAME_MARGIN), px(PAGE_W - 2 * FRAME_MARGIN), px(PAGE_H - 2 * FRAME_MARGIN));
+
+            // Logo "centro pagina": sfondo grande e sfumato, sempre dietro a tutto
+            if (logoCanvas && logoPos === 'center') {
+                drawLogo(PAGE_W / 2, PAGE_H / 2, logoSize, logoOpacity);
+            }
+
+            let y = 52; // margine dall'alto
+
+            // Colonna fornitore (sx) e cliente (dx): stesso numero di righe fisse, sempre allineate
+            // (una riga vuota nel fornitore tiene le due colonne alla stessa altezza, dato che il
+            // C.F. esiste solo lato cliente)
+            const fornitoreLocalita = formattaIndirizzoLocalita(azienda['az-comune'], azienda['az-cap'], azienda['az-provincia']);
+            const fornitoreRighe = [
+                { text: azienda['az-nome'] || '', size: 12 },
+                { text: azienda['az-indirizzo'] || '' },
+                { text: fornitoreLocalita },
+                { text: azienda['az-tel'] ? 'Tel: ' + azienda['az-tel'] : '' },
+                { text: azienda['az-piva'] ? 'P.IVA: ' + azienda['az-piva'] : '' },
+                { text: azienda['az-cf'] ? 'C.F.: ' + azienda['az-cf'] : '' }
+            ];
+            const clienteRighe = [
+                { text: 'Cliente', size: 12 },
+                { text: clienteNome },
+                { text: clienteIndirizzo },
+                { text: clienteLocalita },
+                { text: clientePiva ? 'P.IVA: ' + clientePiva : '' },
+                { text: clienteCf ? 'C.F.: ' + clienteCf : '' }
+            ];
+
+            const startY = y;
+            let yL = startY, yR = startY;
+            const ROW_H = 15;
+
+            // Logo "alto": alla stessa altezza di fornitore/cliente, disegnato PRIMA (quindi sotto al testo)
+            if (logoCanvas && logoPos === 'top') {
+                const blockHEstimate = 18 + ROW_H * (Math.max(fornitoreRighe.length, clienteRighe.length) - 1);
+                drawLogo(PAGE_W / 2, startY + blockHEstimate / 2, logoSize, logoOpacity);
+            }
+
+            ctx.textBaseline = 'alphabetic';
+            fornitoreRighe.forEach((r, i) => {
+                if (r.text) {
+                    ctx.font = `bold ${px(r.size || 9)}px Arial, Helvetica, sans-serif`;
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = '#000';
+                    ctx.fillText(r.text, px(MX), px(yL));
+                }
+                yL += (i === 0 ? 18 : ROW_H);
+            });
+            clienteRighe.forEach((r, i) => {
+                if (r.text) {
+                    ctx.font = `bold ${px(r.size || 9)}px Arial, Helvetica, sans-serif`;
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = '#000';
+                    ctx.fillText(r.text, px(RIGHT_X), px(yR));
+                }
+                yR += (i === 0 ? 18 : ROW_H);
+            });
+            const blockBottom = Math.max(yL, yR);
+
+            y = blockBottom + 20;
+            const infoBoxTop = y;
+            const infoBoxH = 26;
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = px(1.3);
+            ctx.strokeRect(px(MX), px(infoBoxTop), px(RIGHT_X - MX), px(infoBoxH));
+            const infoTextY = infoBoxTop + infoBoxH / 2 + 4;
+            ctx.font = `bold ${px(11)}px Arial, Helvetica, sans-serif`;
+            ctx.textAlign = 'left';
+            ctx.fillText((tipo === 'DDT' ? 'Documento di Trasporto' : tipo) + '  N. ' + numeroConAnno, px(MX + 8), px(infoTextY));
+            ctx.textAlign = 'right';
+            ctx.fillText('Data: ' + dataFmt, px(RIGHT_X - 8), px(infoTextY));
+
+            if (tipo === 'DDT') {
+                const ddtRighe = [
+                    'Causale del Trasporto: ' + (document.getElementById('ddt-causale').value || ''),
+                    'Aspetto Esteriore dei Beni: ' + (document.getElementById('ddt-aspetto').value || ''),
+                    'Data/Ora Inizio Trasporto: ' + formattaDataOraDdt(document.getElementById('ddt-data-ora').value),
+                    'Vettore: ' + (document.getElementById('ddt-vettore').value || '')
+                ];
+                const ddtBoxTop = infoBoxTop + infoBoxH + 14;
+                const ddtLineH = 13;
+                const ddtBoxH = 10 + ddtLineH * ddtRighe.length;
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = px(1.1);
+                ctx.strokeRect(px(MX), px(ddtBoxTop), px(RIGHT_X - MX), px(ddtBoxH));
+                ctx.font = `${px(9)}px Arial, Helvetica, sans-serif`;
+                ctx.textAlign = 'left';
+                ctx.fillStyle = '#000';
+                let ddtY = ddtBoxTop + 13;
+                ddtRighe.forEach(riga => {
+                    ctx.fillText(riga, px(MX + 8), px(ddtY));
+                    ddtY += ddtLineH;
+                });
+                y = ddtBoxTop + ddtBoxH + 16;
+            } else {
+                y = infoBoxTop + infoBoxH + 22;
+            }
+
+            // Tabella articoli — colonne definite per centro (testo centrato in ognuna)
+            const colX = { brand: 74, linea: 142, desc: 245, qta: 340, prezzo: 400, sconto: 459, importo: 520 };
+            // Confini sinistro/destro di ogni colonna (a metà strada tra i centri), usati per
+            // restringere il carattere e bloccare il testo dentro la propria colonna, senza mai
+            // farlo uscire dal bordo sinistro della tabella (bug: testo Brand lungo che sconfinava).
+            const colBounds = {
+                brand:   { left: MX,                              right: (colX.brand + colX.linea) / 2 },
+                linea:   { left: (colX.brand + colX.linea) / 2,    right: (colX.linea + colX.desc) / 2 },
+                desc:    { left: (colX.linea + colX.desc) / 2,     right: (colX.desc + colX.qta) / 2 },
+                qta:     { left: (colX.desc + colX.qta) / 2,       right: (colX.qta + colX.prezzo) / 2 },
+                prezzo:  { left: (colX.qta + colX.prezzo) / 2,     right: (colX.prezzo + colX.sconto) / 2 },
+                sconto:  { left: (colX.prezzo + colX.sconto) / 2,  right: (colX.sconto + colX.importo) / 2 },
+                importo: { left: (colX.sconto + colX.importo) / 2, right: RIGHT_X }
+            };
+            // Disegna testo centrato in una colonna, restringendo il font se necessario finché non
+            // entra nella larghezza disponibile, e bloccando comunque la posizione finale dentro i
+            // confini della colonna (mai oltre il bordo sx/dx), qualunque sia la lunghezza del testo.
+            function drawFitText(text, cx, colLeft, colRight, textY, baseSize, weight) {
+                if (!text) return;
+                const pad = 3;
+                const maxW = Math.max(6, (colRight - colLeft) - pad * 2);
+                let size = baseSize;
+                const setFont = s => { ctx.font = `${weight ? weight + ' ' : ''}${px(s)}px Arial, Helvetica, sans-serif`; };
+                setFont(size);
+                let w = ctx.measureText(text).width / SCALE;
+                while (w > maxW && size > 5) {
+                    size -= 0.25;
+                    setFont(size);
+                    w = ctx.measureText(text).width / SCALE;
+                }
+                let drawX = cx;
+                const halfW = w / 2;
+                if (drawX - halfW < colLeft + pad) drawX = colLeft + pad + halfW;
+                if (drawX + halfW > colRight - pad) drawX = colRight - pad - halfW;
+                ctx.textAlign = 'center';
+                ctx.fillText(text, px(drawX), px(textY));
+            }
+            const rowH = 20;
+            const baselineOffset = 14; // margine interno tra la linea superiore della riga e il testo
+            let rowTop = y - 12;
+            const tableBoxTop = rowTop;
+
+            let textY = rowTop + baselineOffset;
+            drawFitText('Brand', colX.brand, colBounds.brand.left, colBounds.brand.right, textY, 8.5, 'bold');
+            drawFitText('Linea', colX.linea, colBounds.linea.left, colBounds.linea.right, textY, 8.5, 'bold');
+            drawFitText('Descrizione Bene o Servizio', colX.desc, colBounds.desc.left, colBounds.desc.right, textY, 8.5, 'bold');
+            drawFitText('Q.tà', colX.qta, colBounds.qta.left, colBounds.qta.right, textY, 8.5, 'bold');
+            drawFitText('Prezzo', colX.prezzo, colBounds.prezzo.left, colBounds.prezzo.right, textY, 8.5, 'bold');
+            drawFitText('Sc.%', colX.sconto, colBounds.sconto.left, colBounds.sconto.right, textY, 8.5, 'bold');
+            drawFitText('Importo', colX.importo, colBounds.importo.left, colBounds.importo.right, textY, 8.5, 'bold');
+            rowTop += rowH;
+            ctx.lineWidth = px(0.9);
+            ctx.beginPath(); ctx.moveTo(px(MX), px(rowTop)); ctx.lineTo(px(RIGHT_X), px(rowTop)); ctx.stroke();
+
+            const righe = Array.from(righeBody.querySelectorAll('tr'));
+            righe.forEach(tr => {
+                const brand = tr.querySelector('.r-brand').value;
+                const linea = tr.querySelector('.r-linea').value;
+                const desc = tr.querySelector('.r-desc').value;
+                const qta = tr.querySelector('.r-qta').value;
+                const prezzo = parseFloat(tr.querySelector('.r-prezzo').value || 0).toFixed(2);
+                const sconto = tr.querySelector('.r-sconto').value;
+                const importo = parseFloat(tr.querySelector('.r-importo').value || 0).toFixed(2) + ' €';
+                textY = rowTop + baselineOffset;
+                drawFitText(brand, colX.brand, colBounds.brand.left, colBounds.brand.right, textY, 8.5, '');
+                drawFitText(linea, colX.linea, colBounds.linea.left, colBounds.linea.right, textY, 8.5, '');
+                drawFitText(desc, colX.desc, colBounds.desc.left, colBounds.desc.right, textY, 8.5, '');
+                drawFitText(qta, colX.qta, colBounds.qta.left, colBounds.qta.right, textY, 8.5, '');
+                drawFitText(prezzo, colX.prezzo, colBounds.prezzo.left, colBounds.prezzo.right, textY, 8.5, '');
+                drawFitText(sconto, colX.sconto, colBounds.sconto.left, colBounds.sconto.right, textY, 8.5, '');
+                drawFitText(importo, colX.importo, colBounds.importo.left, colBounds.importo.right, textY, 8.5, 'bold');
+                rowTop += rowH;
+                ctx.lineWidth = px(0.5);
+                ctx.beginPath(); ctx.moveTo(px(MX), px(rowTop)); ctx.lineTo(px(RIGHT_X), px(rowTop)); ctx.stroke();
+            });
+            const tableBoxBottom = rowTop;
+            ctx.lineWidth = px(1.2);
+            ctx.strokeRect(px(MX), px(tableBoxTop), px(RIGHT_X - MX), px(tableBoxBottom - tableBoxTop));
+            y = tableBoxBottom;
+
+            // Totali: neri, etichetta e valore ravvicinati, allineati a destra
+            y += 34;
+            ctx.fillStyle = '#000';
+            ctx.font = `bold ${px(13)}px Arial, Helvetica, sans-serif`;
+            ctx.textAlign = 'right';
+            ctx.fillText('Totale Sconti: ' + document.getElementById('tot-sconti').textContent, px(RIGHT_X), px(y));
+            y += 24;
+            ctx.fillText('Imponibile: ' + document.getElementById('tot-imponibile').textContent, px(RIGHT_X), px(y));
+            ctx.fillStyle = '#000';
+
+            // Note e logo "basso": si calcolano dal fondo della pagina verso l'alto, così le note
+            // toccano sempre la riga finale del foglio e il logo (se presente) si impila sopra di
+            // esse senza mai sovrapporsi, qualunque sia la sua altezza reale.
+            const bottomPad = 10;
+            let bottomCursor = (PAGE_H - FRAME_MARGIN) - bottomPad;
+
+            if (note.length > 0) {
+                const noteBoxHeight = 12 + note.length * 13 + 6;
+                const noteBoxBottom = bottomCursor;
+                const noteBoxTop = noteBoxBottom - noteBoxHeight;
+                let noteY = noteBoxTop + 16;
+                ctx.font = `italic ${px(9.5)}px Georgia, 'Times New Roman', serif`;
+                ctx.textAlign = 'left';
+                ctx.fillStyle = '#000';
+                note.forEach(n => { ctx.fillText(n, px(MX + 6), px(noteY)); noteY += 13; });
+                ctx.lineWidth = px(1);
+                ctx.strokeRect(px(MX), px(noteBoxTop), px(RIGHT_X - MX), px(noteBoxHeight));
+                bottomCursor = noteBoxTop - 18; // spazio libero prima del logo, se presente
+            }
+
+            if (logoCanvas && logoPos === 'bottom') {
+                const dispH = (logoCanvas.height / logoCanvas.width) * logoSize;
+                drawLogo(PAGE_W / 2, bottomCursor - dispH / 2, logoSize, logoOpacity);
+            }
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.93);
+            const base64 = dataUrl.split(',')[1];
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+            const imageCmd = { x: 0, y: 0, w: PAGE_W, h: PAGE_H, bytes, width: canvas.width, height: canvas.height };
+            return assemblePdf([], [], [], imageCmd, PAGE_W, PAGE_H);
+        }
+
+        function assemblePdf(texts, lines, rects, imageCmd, PAGE_W, PAGE_H) {
+            const hasImage = !!imageCmd;
+            const hasAlpha = hasImage && imageCmd.alpha !== undefined && imageCmd.alpha < 1;
+            const fontRegular = 1, fontBold = 2, fdRegular = 3, fdBold = 4;
+            let nextObj = 5;
+            const imageObj = hasImage ? nextObj++ : null;
+            const gsObj = hasAlpha ? nextObj++ : null;
+            const catalogObj = nextObj++;
+            const pagesObj = nextObj++;
+            const pageObj = nextObj++;
+            const contentObj = nextObj++;
+
+            const objs = {};
+            function widthsArrayStr(table, defaultW) {
+                const arr = [];
+                for (let c = 32; c <= 126; c++) arr.push(table[c] !== undefined ? table[c] : defaultW);
+                return arr.join(' ');
+            }
+            objs[fdRegular] = `<< /Type /FontDescriptor /FontName /Helvetica /Flags 32 /FontBBox [-166 -225 1000 931] /ItalicAngle 0 /Ascent 718 /Descent -207 /CapHeight 718 /StemV 88 /MissingWidth 556 >>`;
+            objs[fdBold] = `<< /Type /FontDescriptor /FontName /Helvetica-Bold /Flags 32 /FontBBox [-170 -228 1003 962] /ItalicAngle 0 /Ascent 718 /Descent -207 /CapHeight 718 /StemV 140 /MissingWidth 611 >>`;
+            objs[fontRegular] = `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding /FirstChar 32 /LastChar 126 /Widths [${widthsArrayStr(HELV_WIDTHS, 556)}] /FontDescriptor ${fdRegular} 0 R >>`;
+            objs[fontBold] = `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /FirstChar 32 /LastChar 126 /Widths [${widthsArrayStr(HELVB_WIDTHS, 611)}] /FontDescriptor ${fdBold} 0 R >>`;
+            if (hasImage) {
+                objs[imageObj] = { rawStream: imageCmd.bytes, extra: `/Type /XObject /Subtype /Image /Width ${imageCmd.width} /Height ${imageCmd.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode` };
+            }
+            if (hasAlpha) {
+                objs[gsObj] = `<< /Type /ExtGState /ca ${imageCmd.alpha} /CA ${imageCmd.alpha} >>`;
+            }
+            objs[catalogObj] = `<< /Type /Catalog /Pages ${pagesObj} 0 R >>`;
+            objs[pagesObj] = `<< /Type /Pages /Kids [${pageObj} 0 R] /Count 1 >>`;
+            let resources = `<< /Font << /F1 ${fontRegular} 0 R /F2 ${fontBold} 0 R >>`;
+            if (hasImage) resources += ` /XObject << /Im1 ${imageObj} 0 R >>`;
+            if (hasAlpha) resources += ` /ExtGState << /GS1 ${gsObj} 0 R >>`;
+            resources += ` >>`;
+            objs[pageObj] = `<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Resources ${resources} /Contents ${contentObj} 0 R >>`;
+
+            const parts = [];
+            if (hasImage) {
+                parts.push('q');
+                if (hasAlpha) parts.push('/GS1 gs');
+                parts.push(`${imageCmd.w} 0 0 ${imageCmd.h} ${imageCmd.x} ${imageCmd.y} cm`);
+                parts.push('/Im1 Do');
+                parts.push('Q');
+            }
+            rects.forEach(r => {
+                parts.push(`${r.lw} w`);
+                parts.push(`${r.x} ${r.y} ${r.w} ${r.h} re S`);
+            });
+            lines.forEach(l => {
+                parts.push(`${l.lw} w`);
+                parts.push(`${l.x1} ${l.y1} m ${l.x2} ${l.y2} l S`);
+            });
+            parts.push('BT');
+            let curFont = null;
+            texts.forEach(t => {
+                const fname = t.bold ? '/F2' : '/F1';
+                if (fname !== curFont) { parts.push(`${fname} ${t.size} Tf`); curFont = fname; }
+                parts.push(`1 0 0 1 ${t.x} ${t.y} Tm (${escapePDFText(t.text)}) Tj`);
+            });
+            parts.push('ET');
+            objs[contentObj] = { stream: parts.join('\n') };
+
+            // Serializzazione a livello di byte (necessaria per l'immagine JPEG binaria)
+            const chunks = [];
+            const offsets = {};
+            let pos = 0;
+            function pushStr(s) { chunks.push(s); pos += s.length; }
+            function pushBytes(b) { chunks.push(b); pos += b.length; }
+
+            pushStr('%PDF-1.4\n');
+            const objNums = Object.keys(objs).map(Number).sort((a, b) => a - b);
+            objNums.forEach(num => {
+                offsets[num] = pos;
+                const body = objs[num];
+                if (typeof body === 'string') {
+                    pushStr(`${num} 0 obj\n${body}\nendobj\n`);
+                } else if (body.rawStream) {
+                    pushStr(`${num} 0 obj\n<< ${body.extra} /Length ${body.rawStream.length} >>\nstream\n`);
+                    pushBytes(body.rawStream);
+                    pushStr(`\nendstream\nendobj\n`);
+                } else {
+                    pushStr(`${num} 0 obj\n<< /Length ${body.stream.length} >>\nstream\n${body.stream}\nendstream\nendobj\n`);
+                }
+            });
+            const xrefOffset = pos;
+            const maxObjNum = objNums[objNums.length - 1];
+            pushStr(`xref\n0 ${maxObjNum + 1}\n0000000000 65535 f \n`);
+            for (let n = 1; n <= maxObjNum; n++) {
+                const off = offsets[n] !== undefined ? offsets[n] : 0;
+                pushStr(String(off).padStart(10, '0') + ' 00000 n \n');
+            }
+            pushStr(`trailer\n<< /Size ${maxObjNum + 1} /Root ${catalogObj} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+
+            // Uniamo tutto in un unico Uint8Array
+            let totalLen = 0;
+            chunks.forEach(c => totalLen += (typeof c === 'string' ? c.length : c.length));
+            const out = new Uint8Array(totalLen);
+            let p = 0;
+            chunks.forEach(c => {
+                if (typeof c === 'string') {
+                    for (let i = 0; i < c.length; i++) out[p++] = c.charCodeAt(i) & 0xFF;
+                } else {
+                    out.set(c, p); p += c.length;
+                }
+            });
+            return out;
+        }
+
+        // ===== ARCHIVIO DOCUMENTI =====
+        // Ogni volta che si genera (o si condivide) un PDF, il documento viene salvato qui:
+        // cliente, articoli, note e totali, così da poterlo riaprire o usare come base per uno
+        // nuovo senza reinserire tutto. Se rigeneri lo stesso numero/anno, la voce si aggiorna
+        // invece di duplicarsi.
+        function estraiRigheCorrenti() {
+            return Array.from(righeBody.querySelectorAll('tr')).map(tr => ({
+                desc: tr.querySelector('.r-desc').value,
+                brand: tr.querySelector('.r-brand').value,
+                linea: tr.querySelector('.r-linea').value,
+                qta: tr.querySelector('.r-qta').value,
+                prezzo: tr.querySelector('.r-prezzo').value,
+                sconto: tr.querySelector('.r-sconto').value,
+                importo: tr.querySelector('.r-importo').value,
+                importoManuale: tr.dataset.importoManuale === '1'
+            }));
+        }
+
+        function salvaDocumentoCorrenteInArchivio() {
+            const tipo = document.getElementById('doc-tipo').value;
+            const numero = document.getElementById('doc-numero').value || '';
+            const anno = annoDocumentoCorrente();
+            const entry = {
+                id: tipo + '-' + numero + '-' + anno,
+                tipo: tipo,
+                numero: numero,
+                anno: anno,
+                dataISO: document.getElementById('doc-data').value,
+                cliente: {
+                    nome: document.getElementById('cl-nome').value,
+                    indirizzo: document.getElementById('cl-indirizzo').value,
+                    comune: document.getElementById('cl-comune').value,
+                    cap: document.getElementById('cl-cap').value,
+                    provincia: document.getElementById('cl-provincia').value,
+                    piva: document.getElementById('cl-piva').value,
+                    cf: document.getElementById('cl-cf').value,
+                    sdi: document.getElementById('cl-sdi').value,
+                    pec: document.getElementById('cl-pec').value,
+                    email: document.getElementById('cl-email').value,
+                    tel: document.getElementById('cl-tel').value,
+                    cellulare: document.getElementById('cl-cellulare').value
+                },
+                righe: estraiRigheCorrenti(),
+                note: document.getElementById('doc-note').value,
+                totSconti: document.getElementById('tot-sconti').textContent,
+                totImponibile: document.getElementById('tot-imponibile').textContent,
+                ddt: tipo === 'DDT' ? {
+                    causale: document.getElementById('ddt-causale').value,
+                    aspetto: document.getElementById('ddt-aspetto').value,
+                    dataOra: document.getElementById('ddt-data-ora').value,
+                    vettore: document.getElementById('ddt-vettore').value
+                } : null,
+                salvatoIl: new Date().toISOString()
+            };
+            const archivio = JSON.parse(localStorage.getItem('documentiArchivio') || '[]');
+            const idx = archivio.findIndex(d => d.id === entry.id);
+            if (idx >= 0) archivio[idx] = entry; else archivio.unshift(entry);
+            localStorage.setItem('documentiArchivio', JSON.stringify(archivio));
+        }
+
+        function renderArchivio() {
+            const cont = document.getElementById('lista-archivio');
+            if (!cont) return;
+            const query = (document.getElementById('archivio-ricerca').value || '').toLowerCase().trim();
+            let archivio = JSON.parse(localStorage.getItem('documentiArchivio') || '[]');
+            if (query) archivio = archivio.filter(d => ((d.cliente && d.cliente.nome) || '').toLowerCase().includes(query));
+            if (archivio.length === 0) {
+                cont.innerHTML = '<p style="font-size:12px; color:#888;">Nessun documento in archivio.</p>';
+                return;
+            }
+            cont.innerHTML = archivio.map(d => {
+                const dataFmt = d.dataISO ? new Date(d.dataISO).toLocaleDateString('it-IT') : '';
+                return `
+                    <div style="padding:10px 0; border-bottom:1px solid #eee;">
+                        <div style="font-size:12px; margin-bottom:6px;">
+                            <strong>${escapeHtml(d.tipo === 'DDT' ? 'Documento di Trasporto' : d.tipo)} N° ${escapeHtml(d.numero)}/${d.anno}</strong> — ${dataFmt}<br>
+                            ${escapeHtml((d.cliente && d.cliente.nome) || '(senza cliente)')}${d.totImponibile ? ' — ' + escapeHtml(d.totImponibile) : ''}
+                        </div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="btn secondary" data-apri-doc="${escapeHtml(d.id)}" style="padding:4px 8px; font-size:11px;">📂 Apri</button>
+                            <button type="button" class="btn secondary" data-duplica-doc="${escapeHtml(d.id)}" style="padding:4px 8px; font-size:11px;">⧉ Duplica come nuovo</button>
+                            <button type="button" class="btn secondary" data-elimina-doc="${escapeHtml(d.id)}" style="padding:4px 8px; font-size:11px;">🗑️ Elimina</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        document.getElementById('archivio-ricerca').addEventListener('input', renderArchivio);
+
+        // Ricarica un documento salvato nel form: "comeNuovo" tiene cliente/articoli/note ma
+        // propone data odierna e il prossimo numero disponibile, per farne uno nuovo simile.
+        function caricaDocumentoArchivio(id, comeNuovo) {
+            const archivio = JSON.parse(localStorage.getItem('documentiArchivio') || '[]');
+            const d = archivio.find(x => x.id === id);
+            if (!d) return;
+            document.getElementById('doc-tipo').value = d.tipo;
+            aggiornaVisibilitaDdt();
+            document.getElementById('ddt-causale').value = (d.ddt && d.ddt.causale) || '';
+            document.getElementById('ddt-aspetto').value = (d.ddt && d.ddt.aspetto) || '';
+            document.getElementById('ddt-data-ora').value = (d.ddt && !comeNuovo && d.ddt.dataOra) || '';
+            document.getElementById('ddt-vettore').value = (d.ddt && d.ddt.vettore) || '';
+            if (comeNuovo) {
+                document.getElementById('doc-data').value = new Date().toISOString().split('T')[0];
+                aggiornaNumeroSuggerito();
+            } else {
+                document.getElementById('doc-data').value = d.dataISO || '';
+                document.getElementById('doc-numero').value = d.numero || '';
+            }
+            if (d.cliente && d.cliente.nome) riempiFormCliente(d.cliente);
+            righeBody.innerHTML = '';
+            (d.righe && d.righe.length ? d.righe : [{}]).forEach(r => {
+                const tr = creaRigaVuota();
+                righeBody.appendChild(tr);
+                tr.querySelector('.r-desc').value = r.desc || '';
+                tr.querySelector('.r-brand').value = r.brand || '';
+                tr.querySelector('.r-linea').value = r.linea || '';
+                tr.querySelector('.r-qta').value = r.qta || 1;
+                tr.querySelector('.r-prezzo').value = r.prezzo || 0;
+                tr.querySelector('.r-sconto').value = r.sconto || 0;
+                tr.querySelector('.r-importo').value = r.importo || 0;
+                if (r.importoManuale) tr.dataset.importoManuale = '1';
+            });
+            document.getElementById('doc-note').value = d.note || '';
+            recalcola();
+            document.querySelector('.tab-btn[data-tab="documento"]').click();
+            toast(comeNuovo ? 'Documento caricato come base per uno nuovo' : 'Documento riaperto');
+        }
+
+        document.getElementById('lista-archivio').addEventListener('click', (e) => {
+            const btnApri = e.target.closest('[data-apri-doc]');
+            const btnDup = e.target.closest('[data-duplica-doc]');
+            const btnDel = e.target.closest('[data-elimina-doc]');
+            if (btnApri) {
+                caricaDocumentoArchivio(btnApri.dataset.apriDoc, false);
+            } else if (btnDup) {
+                caricaDocumentoArchivio(btnDup.dataset.duplicaDoc, true);
+            } else if (btnDel) {
+                if (!confirm('Eliminare questo documento dall\'archivio?')) return;
+                const archivio = JSON.parse(localStorage.getItem('documentiArchivio') || '[]');
+                const idx = archivio.findIndex(x => x.id === btnDel.dataset.eliminaDoc);
+                if (idx >= 0) {
+                    archivio.splice(idx, 1);
+                    localStorage.setItem('documentiArchivio', JSON.stringify(archivio));
+                    renderArchivio();
+                    toast('Eliminato dall\'archivio');
+                }
+            }
+        });
+
+        // ===== NOME FILE E CONDIVISIONE PDF =====
+        function slugFilename(s) {
+            return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+        }
+        function nomeFilePdf() {
+            const tipo = slugFilename(document.getElementById('doc-tipo').value) || 'Documento';
+            const numero = document.getElementById('doc-numero').value || '0';
+            const anno = annoDocumentoCorrente();
+            const cliente = slugFilename(document.getElementById('cl-nome').value);
+            return tipo + '_' + numero + '-' + anno + (cliente ? '_' + cliente : '') + '.pdf';
+        }
+
+        // ===== BRIDGE APP ANDROID (AllDocs.apk) =====
+        // Quando questa pagina gira dentro l'app Android nativa (wrapper WebView), è presente
+        // window.AndroidBridge e lo usiamo per salvare/condividere file con le funzioni native
+        // del telefono (niente Blob/download del browser, che dentro una WebView non sempre
+        // funzionano). Se la pagina gira invece in un browser normale (Brave, Chrome...),
+        // AndroidBridge non esiste e tutto continua a funzionare come prima, via Blob.
+        function bytesToBase64(bytes) {
+            let binary = '';
+            const chunk = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunk) {
+                binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+            }
+            return btoa(binary);
+        }
+        function salvaBytes(filename, bytes, mimeType) {
+            if (window.AndroidBridge && window.AndroidBridge.saveFile) {
+                window.AndroidBridge.saveFile(filename, bytesToBase64(bytes), mimeType);
+                return;
+            }
+            const blob = new Blob([bytes], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        document.getElementById('btn-pdf').addEventListener('click', async () => {
+            toast('Genero il PDF...');
+            const bytes = await buildPdfBytes();
+            salvaDocumentoCorrenteInArchivio();
+            salvaBytes(nomeFilePdf(), bytes, 'application/pdf');
+        });
+
+        // "Condividi PDF": prova ad aprire direttamente il pannello di condivisione di Android
+        // (WhatsApp, Email, ecc.) — nell'app nativa tramite il bridge, nel browser tramite la
+        // Web Share API; se nessuna delle due è disponibile, apre comunque il PDF in una scheda
+        // così lo si può condividere da lì.
+        document.getElementById('btn-condividi-pdf').addEventListener('click', async () => {
+            toast('Preparo il PDF...');
+            const bytes = await buildPdfBytes();
+            salvaDocumentoCorrenteInArchivio();
+            const filename = nomeFilePdf();
+            if (window.AndroidBridge && window.AndroidBridge.sharePdf) {
+                window.AndroidBridge.sharePdf(filename, bytesToBase64(bytes));
+                return;
+            }
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            try {
+                const file = new File([blob], filename, { type: 'application/pdf' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: filename });
+                    return;
+                }
+            } catch (err) {
+                if (err && err.name === 'AbortError') return; // l'utente ha annullato la condivisione
+            }
+            // Fallback: nessun supporto alla condivisione diretta, apriamo il PDF come al solito
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            toast('Condivisione diretta non disponibile: apro il PDF, usa l\'icona di condivisione del browser');
+        });
+
+        // ===== CLIENTI: salvataggio, elenco, richiamo, eliminazione =====
+        document.getElementById('btn-crea-nuovo-cliente').addEventListener('click', (e) => {
+            document.getElementById('cliente-dettagli').style.display = 'block';
+            e.target.style.display = 'none';
+        });
+
+        // "Annulla": chiude il pannello dettagli cliente senza salvare, riportando tutto com'era
+        function chiudiPannelloCliente() {
+            const dettagli = document.getElementById('cliente-dettagli');
+            if (dettagli.style.display === 'none') return false;
+            dettagli.style.display = 'none';
+            document.getElementById('btn-crea-nuovo-cliente').style.display = '';
+            ['cl-pec', 'cl-email', 'cl-sdi', 'cl-piva', 'cl-cf', 'cl-indirizzo', 'cl-comune', 'cl-cap', 'cl-provincia', 'cl-tel', 'cl-cellulare'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            return true;
+        }
+        document.getElementById('btn-annulla-cliente').addEventListener('click', chiudiPannelloCliente);
+
+        // "Crea nuovo" per gli articoli: mostra Brand/Linea per inserire un bene/servizio non a catalogo
+        document.getElementById('btn-crea-nuovo-articolo').addEventListener('click', () => {
+            document.getElementById('righe-body').classList.toggle('mostra-extra');
+        });
+
+        // I clienti salvati prima di questo aggiornamento avevano Città e CAP in un unico campo
+        // ("localita"). Best-effort: se non troviamo ancora comune/cap separati, li ricaviamo da lì
+        // (cerchiamo un CAP di 5 cifre nel testo; il resto diventa il comune).
+        function splitLocalitaLegacy(testo) {
+            if (!testo) return { comune: '', cap: '' };
+            const match = testo.match(/\b(\d{5})\b/);
+            if (!match) return { comune: testo.trim(), cap: '' };
+            return { comune: testo.replace(match[1], '').trim(), cap: match[1] };
+        }
+
+        // Compone comune/CAP/provincia in un'unica riga leggibile per anteprima e PDF, es. "20100 Milano (MI)"
+        function formattaIndirizzoLocalita(comune, cap, provincia) {
+            let riga = [cap, comune].filter(Boolean).join(' ');
+            if (provincia) riga += (riga ? ' ' : '') + '(' + provincia + ')';
+            return riga;
+        }
+
+        // Converte il valore di un <input type="datetime-local"> (es. "2026-09-19T14:30")
+        // nel formato italiano "19/09/2026 14:30" per anteprima e PDF del DDT.
+        function formattaDataOraDdt(valore) {
+            if (!valore) return '';
+            const d = new Date(valore);
+            if (isNaN(d.getTime())) return '';
+            const gg = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            return `${gg}/${mm}/${d.getFullYear()} ${hh}:${min}`;
+        }
+
+        document.getElementById('btn-salva-cliente').addEventListener('click', () => {
+            const clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
+            const nome = document.getElementById('cl-nome').value;
+            if (!nome) { toast('Inserisci nome cliente'); return; }
+            const idx = clienti.findIndex(c => c.nome === nome);
+            const record = {
+                nome: nome,
+                indirizzo: document.getElementById('cl-indirizzo').value,
+                comune: document.getElementById('cl-comune').value,
+                cap: document.getElementById('cl-cap').value,
+                provincia: document.getElementById('cl-provincia').value,
+                piva: document.getElementById('cl-piva').value,
+                cf: document.getElementById('cl-cf').value,
+                sdi: document.getElementById('cl-sdi').value,
+                pec: document.getElementById('cl-pec').value,
+                email: document.getElementById('cl-email').value,
+                tel: document.getElementById('cl-tel').value,
+                cellulare: document.getElementById('cl-cellulare').value
+            };
+            if (idx >= 0) clienti[idx] = record; else clienti.push(record);
+            localStorage.setItem('clienti', JSON.stringify(clienti));
+            toast('Cliente salvato');
+            renderClienti();
+        });
+
+        // Riempie il form Cliente con i dati di un cliente salvato: usata sia dall'autocompletamento
+        // digitando il nome, sia dal tasto "Modifica" nell'elenco clienti nella tab Dati.
+        function riempiFormCliente(c) {
+            const legacy = c.comune === undefined ? splitLocalitaLegacy(c.localita) : null;
+            document.getElementById('cl-nome').value = c.nome;
+            document.getElementById('cl-indirizzo').value = c.indirizzo || '';
+            document.getElementById('cl-comune').value = c.comune !== undefined ? c.comune : legacy.comune;
+            // Autocorregge sul momento anche i clienti già salvati in passato con lo zero iniziale
+            // perso (es. CAP importato prima di questa correzione): non serve più reimportare.
+            document.getElementById('cl-cap').value = padCodiceNumerico(c.cap !== undefined ? c.cap : legacy.cap, 5);
+            document.getElementById('cl-provincia').value = c.provincia || '';
+            document.getElementById('cl-piva').value = padCodiceNumerico(c.piva || '', 11);
+            document.getElementById('cl-cf').value = c.cf || '';
+            // Il campo unico serve sia per il Codice Destinatario dei privati (7 caratteri) sia
+            // per il Codice Univoco Ufficio della Pubblica Amministrazione (6 caratteri): le
+            // lunghezze sono diverse, quindi qui non forziamo più lo zero iniziale a una cifra fissa.
+            document.getElementById('cl-sdi').value = c.sdi || c.univoco || '';
+            document.getElementById('cl-pec').value = c.pec || '';
+            document.getElementById('cl-email').value = c.email || '';
+            document.getElementById('cl-tel').value = c.tel || '';
+            document.getElementById('cl-cellulare').value = c.cellulare || '';
+            document.getElementById('cliente-dettagli').style.display = 'block';
+            document.getElementById('btn-crea-nuovo-cliente').style.display = 'none';
+        }
+
+        // Digitando il nome cliente, se corrisponde esattamente a uno già salvato, riempie gli altri campi
+        attachAutocomplete(document.getElementById('cl-nome'), (query) => {
+            const clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
+            return clienti.filter(c => (c.nome || '').toLowerCase().includes(query)).map(c => ({ label: c.nome, data: c }));
+        }, riempiFormCliente);
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        }
+
+        function refreshClientiDatalist() {
+            const clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
+            const dl = document.getElementById('clienti-datalist');
+            if (dl) dl.innerHTML = clienti.map(c => `<option value="${c.nome}">`).join('');
+        }
+
+        // ===== Elenco clienti nella tab Dati: modifica (richiama nel form) ed elimina singolarmente =====
+        function renderClienti() {
+            refreshClientiDatalist();
+            const clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
+            const cont = document.getElementById('lista-clienti');
+            if (!cont) return;
+            if (clienti.length === 0) {
+                cont.innerHTML = '<p style="font-size:12px; color:#888;">Nessun cliente salvato.</p>';
+                return;
+            }
+            cont.innerHTML = clienti.map((c, i) => `
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #eee;">
+                    <div style="font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        <strong>${escapeHtml(c.nome)}</strong>${c.comune ? ' — ' + escapeHtml(c.comune) : ''}
+                    </div>
+                    <div style="display:flex; gap:6px; flex-shrink:0;">
+                        <button type="button" class="btn secondary" data-modifica-cliente="${i}" style="padding:4px 8px; font-size:12px;" title="Modifica">✏️</button>
+                        <button type="button" class="btn secondary" data-elimina-cliente="${i}" style="padding:4px 8px; font-size:12px;" title="Elimina">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('lista-clienti').addEventListener('click', (e) => {
+            const btnMod = e.target.closest('[data-modifica-cliente]');
+            const btnDel = e.target.closest('[data-elimina-cliente]');
+            if (btnMod) {
+                const clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
+                const c = clienti[parseInt(btnMod.dataset.modificaCliente, 10)];
+                if (!c) return;
+                riempiFormCliente(c);
+                document.querySelector('.tab-btn[data-tab="documento"]').click();
+                document.getElementById('cl-nome').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                toast('Modifica i campi e premi "Salva Cliente"');
+            } else if (btnDel) {
+                const clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
+                const idx = parseInt(btnDel.dataset.eliminaCliente, 10);
+                const c = clienti[idx];
+                if (!c) return;
+                if (!confirm('Eliminare il cliente "' + c.nome + '"?')) return;
+                clienti.splice(idx, 1);
+                localStorage.setItem('clienti', JSON.stringify(clienti));
+                renderClienti();
+                toast('Cliente eliminato');
+            }
+        });
+
+        // ===== PRODOTTI: elenco, uso nel documento (il catalogo si popola via CSV, o digitando direttamente negli articoli) =====
+        function refreshProdottiDatalist() {
+            const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
+            const dl = document.getElementById('prodotti-datalist');
+            if (dl) dl.innerHTML = prodotti.map(p => `<option value="${p.desc}">`).join('');
+        }
+
+        // Digitando la descrizione di un articolo, se corrisponde a un prodotto salvato, riempie brand/linea/prezzo/sconto
+        function bindProdottoAutocomplete(inputEl) {
+            attachAutocomplete(inputEl, (query) => {
+                const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
+                return prodotti.filter(p => (p.desc || '').toLowerCase().includes(query)).map(p => ({ label: p.desc, data: p }));
+            }, (p) => {
+                const tr = inputEl.closest('tr');
+                tr.querySelector('.r-desc').value = p.desc;
+                tr.querySelector('.r-brand').value = p.brand || '';
+                tr.querySelector('.r-linea').value = p.linea || '';
+                tr.querySelector('.r-qta').value = p.qta || 1;
+                tr.querySelector('.r-prezzo').value = p.prezzo;
+                tr.querySelector('.r-sconto').value = p.sconto;
+                recalcola();
+            });
+        }
+
+        // ===== Elenco articoli nella tab Dati: modifica diretta in riga (non c'è un form a parte
+        // come per i clienti) ed eliminazione singola =====
+        let prodottoInModificaIdx = null;
+        function renderProdotti() {
+            refreshProdottiDatalist();
+            const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
+            const cont = document.getElementById('lista-prodotti');
+            if (!cont) return;
+            if (prodotti.length === 0) {
+                cont.innerHTML = '<p style="font-size:12px; color:#888;">Nessun articolo salvato.</p>';
+                return;
+            }
+            cont.innerHTML = prodotti.map((p, i) => {
+                if (i === prodottoInModificaIdx) {
+                    return `
+                        <div class="prod-edit-block" data-i="${i}" style="padding:8px 0; border-bottom:1px solid #eee;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
+                                <input type="text" data-campo="brand" placeholder="Brand" value="${escapeHtml(p.brand)}" style="padding:6px; font-size:12px;">
+                                <input type="text" data-campo="linea" placeholder="Linea" value="${escapeHtml(p.linea)}" style="padding:6px; font-size:12px;">
+                            </div>
+                            <input type="text" data-campo="desc" placeholder="Descrizione" value="${escapeHtml(p.desc)}" style="width:100%; padding:6px; font-size:12px; margin-bottom:6px; box-sizing:border-box;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:8px;">
+                                <input type="number" data-campo="qta" placeholder="Q.tà" value="${p.qta || 1}" style="padding:6px; font-size:12px;">
+                                <input type="number" step="0.01" data-campo="prezzo" placeholder="Prezzo" value="${p.prezzo || 0}" style="padding:6px; font-size:12px;">
+                                <input type="number" step="0.01" data-campo="sconto" placeholder="Sconto %" value="${p.sconto || 0}" style="padding:6px; font-size:12px;">
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <button type="button" class="btn ochre" data-salva-prodotto style="padding:5px 10px; font-size:12px;">Salva</button>
+                                <button type="button" class="btn secondary" data-annulla-prodotto style="padding:5px 10px; font-size:12px;">Annulla</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                return `
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #eee;">
+                        <div style="font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                            <strong>${escapeHtml(p.desc)}</strong>${p.brand ? ' — ' + escapeHtml(p.brand) : ''}${p.prezzo != null ? ' (' + Number(p.prezzo).toFixed(2) + ' €)' : ''}
+                        </div>
+                        <div style="display:flex; gap:6px; flex-shrink:0;">
+                            <button type="button" class="btn secondary" data-modifica-prodotto="${i}" style="padding:4px 8px; font-size:12px;" title="Modifica">✏️</button>
+                            <button type="button" class="btn secondary" data-elimina-prodotto="${i}" style="padding:4px 8px; font-size:12px;" title="Elimina">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('lista-prodotti').addEventListener('click', (e) => {
+            const btnMod = e.target.closest('[data-modifica-prodotto]');
+            const btnDel = e.target.closest('[data-elimina-prodotto]');
+            const btnSalva = e.target.closest('[data-salva-prodotto]');
+            const btnAnnulla = e.target.closest('[data-annulla-prodotto]');
+            if (btnMod) {
+                prodottoInModificaIdx = parseInt(btnMod.dataset.modificaProdotto, 10);
+                renderProdotti();
+            } else if (btnAnnulla) {
+                prodottoInModificaIdx = null;
+                renderProdotti();
+            } else if (btnSalva) {
+                const block = btnSalva.closest('.prod-edit-block');
+                const i = parseInt(block.dataset.i, 10);
+                const campi = {};
+                block.querySelectorAll('[data-campo]').forEach(inp => { campi[inp.dataset.campo] = inp.value; });
+                if (!campi.desc) { toast('Inserisci una descrizione'); return; }
+                const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
+                prodotti[i] = {
+                    brand: campi.brand || '',
+                    linea: campi.linea || '',
+                    desc: campi.desc,
+                    qta: parseFloat(campi.qta) || 1,
+                    prezzo: parseFloat(campi.prezzo) || 0,
+                    sconto: parseFloat(campi.sconto) || 0
+                };
+                localStorage.setItem('prodotti', JSON.stringify(prodotti));
+                prodottoInModificaIdx = null;
+                renderProdotti();
+                toast('Articolo aggiornato');
+            } else if (btnDel) {
+                const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
+                const idx = parseInt(btnDel.dataset.eliminaProdotto, 10);
+                const p = prodotti[idx];
+                if (!p) return;
+                if (!confirm('Eliminare l\'articolo "' + p.desc + '"?')) return;
+                prodotti.splice(idx, 1);
+                localStorage.setItem('prodotti', JSON.stringify(prodotti));
+                prodottoInModificaIdx = null;
+                renderProdotti();
+                toast('Articolo eliminato');
+            }
+        });
+
+        // Aggiorno l'elenco tabelle quando si apre la relativa tab
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.tab === 'dati') { renderClienti(); renderProdotti(); renderArchivio(); }
+            });
+        });
+
+        // ===== NOTA PREDEFINITA A PIÈ DI PAGINA =====
+        // Nota "di fabbrica" incorporata nell'app: se un dispositivo/browser ha già salvato una
+        // notaDefault in passato (localStorage NON si sincronizza tra dispositivi né si aggiorna
+        // da solo quando l'app viene aggiornata), quel valore vecchio ha sempre la precedenza qui
+        // sotto e nasconde qualunque nuova nota di fabbrica finché non viene ripristinata a mano.
+        const NOTA_DI_FABBRICA = "I prezzi indicati sono da intendersi IVA esclusa; l'IVA sarà esposta in fattura.";
+        const notaSalvata = localStorage.getItem('notaDefault') || NOTA_DI_FABBRICA;
+        document.getElementById('doc-note').value = notaSalvata;
+        document.getElementById('btn-salva-nota-default').addEventListener('click', () => {
+            const val = document.getElementById('doc-note').value;
+            localStorage.setItem('notaDefault', val);
+            toast('Nota predefinita salvata');
+        });
+        document.getElementById('btn-reset-nota-default').addEventListener('click', () => {
+            localStorage.removeItem('notaDefault');
+            document.getElementById('doc-note').value = NOTA_DI_FABBRICA;
+            const notesInput = document.getElementById('preview-notes-input');
+            if (notesInput) notesInput.value = NOTA_DI_FABBRICA;
+            toast('Nota predefinita ripristinata su questo dispositivo');
+        });
+
+        // ===== IMPORT CSV (da Excel, AlfaDeskPro, Aruba) =====
+        // Parser semplice: rileva da solo se il file usa la virgola o il punto e virgola
+        // (Excel in italiano esporta spesso con il punto e virgola), gestisce campi tra virgolette.
+        function parseCSV(text) {
+            const lines = text.split(/\r\n|\n|\r/).filter(l => l.trim() !== '');
+            if (lines.length === 0) return [];
+            const delimiter = lines[0].includes(';') ? ';' : ',';
+            function parseLine(line) {
+                const out = [];
+                let cur = '', inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const ch = line[i];
+                    if (inQuotes) {
+                        if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else inQuotes = false; }
+                        else cur += ch;
+                    } else {
+                        if (ch === '"') inQuotes = true;
+                        else if (ch === delimiter) { out.push(cur); cur = ''; }
+                        else cur += ch;
+                    }
+                }
+                out.push(cur);
+                return out.map(s => s.trim());
+            }
+            const headers = parseLine(lines[0]).map(h => h.toLowerCase());
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cells = parseLine(lines[i]);
+                const obj = {};
+                headers.forEach((h, idx) => { obj[h] = cells[idx] !== undefined ? cells[idx] : ''; });
+                rows.push(obj);
+            }
+            return rows;
+        }
+        // Se un codice numerico (CAP, P.IVA, Codice SDI) arriva da Excel senza lo zero iniziale —
+        // perso perché la colonna era formattata come Numero invece che Testo — lo rimettiamo
+        // (CAP: 5 cifre, P.IVA italiana: 11 cifre, Codice SDI: 7 caratteri). Non tocchiamo il
+        // valore se contiene già lettere (es. SDI alfanumerico) o se è più lungo del previsto.
+        function padCodiceNumerico(valore, lunghezza) {
+            if (valore && /^\d+$/.test(valore) && valore.length < lunghezza) {
+                return valore.padStart(lunghezza, '0');
+            }
+            return valore;
+        }
+
+        function pickField(row, names) {
+            for (const n of names) { if (row[n] !== undefined && row[n] !== '') return row[n]; }
+            // Nessuna corrispondenza esatta con l'intestazione: proviamo a cercare una colonna il
+            // cui titolo CONTIENE uno dei termini cercati (es. intestazione "Codice SDI" per ['sdi']).
+            for (const n of names) {
+                for (const key of Object.keys(row)) {
+                    if (key.includes(n) && row[key] !== '') return row[key];
+                }
+            }
+            return '';
+        }
+
+        document.getElementById('import-clienti-csv').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                const rows = await leggiRigheDaFile(file, 'clientiXlsxTemplate');
+                const clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
+                let importati = 0;
+                rows.forEach(row => {
+                    const nome = pickField(row, ['nome', 'ragione sociale', 'cliente', 'denominazione']);
+                    if (!nome) return;
+                    // Comune/CAP/Provincia come colonne separate (formato nuovo); se il file è ancora
+                    // nel vecchio formato con "Città e CAP" in una sola colonna, lo separiamo da lì.
+                    let comune = pickField(row, ['comune', 'città', 'citta', 'localita', 'località']);
+                    let cap = pickField(row, ['cap']);
+                    const provincia = pickField(row, ['provincia', 'prov']);
+                    if (!comune || !cap) {
+                        const combinato = pickField(row, ['città e cap', 'citta e cap']);
+                        if (combinato) {
+                            const split = splitLocalitaLegacy(combinato);
+                            if (!comune) comune = split.comune;
+                            if (!cap) cap = split.cap;
+                        }
+                    }
+                    cap = padCodiceNumerico(cap, 5);
+                    const record = {
+                        nome: nome,
+                        indirizzo: pickField(row, ['indirizzo', 'via', 'via e numero civico']),
+                        comune: comune,
+                        cap: cap,
+                        provincia: provincia,
+                        piva: padCodiceNumerico(pickField(row, ['piva', 'p.iva', 'partita iva']), 11),
+                        cf: pickField(row, ['cf', 'codice fiscale']),
+                        sdi: pickField(row, ['sdi', 'codice destinatario', 'codice univoco', 'univoco']),
+                        pec: pickField(row, ['pec']),
+                        email: pickField(row, ['email', 'e-mail', 'mail']),
+                        tel: pickField(row, ['telefono', 'tel']),
+                        cellulare: pickField(row, ['cellulare', 'cell', 'mobile'])
+                    };
+                    const idx = clienti.findIndex(c => c.nome === nome);
+                    if (idx >= 0) clienti[idx] = record; else clienti.push(record);
+                    importati++;
+                });
+                localStorage.setItem('clienti', JSON.stringify(clienti));
+                renderClienti();
+                toast(importati + ' clienti importati');
+            } catch (err) {
+                toast('File non leggibile — controlla il formato');
+            }
+            e.target.value = '';
+        });
+
+        document.getElementById('import-prodotti-csv').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                const rows = await leggiRigheDaFile(file, 'prodottiXlsxTemplate');
+                const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
+                let importati = 0;
+                rows.forEach(row => {
+                    const desc = pickField(row, ['descrizione bene o servizio', 'descrizione', 'desc', 'nome', 'articolo', 'prodotto']);
+                    if (!desc) return;
+                    const prezzoRaw = pickField(row, ['prezzo', 'importo', 'costo']).replace(',', '.');
+                    const scontoRaw = pickField(row, ['sconto', 'sc.%', 'sconto%']).replace(',', '.');
+                    const qtaRaw = pickField(row, ['q.tà', 'qta', 'quantita', 'quantità']).replace(',', '.');
+                    const record = {
+                        brand: pickField(row, ['brand', 'marca']),
+                        linea: pickField(row, ['linea', 'serie']),
+                        desc: desc,
+                        qta: parseFloat(qtaRaw) || 1,
+                        prezzo: parseFloat(prezzoRaw) || 0,
+                        sconto: parseFloat(scontoRaw) || 0
+                    };
+                    const idx = prodotti.findIndex(p => p.desc === desc);
+                    if (idx >= 0) prodotti[idx] = record; else prodotti.push(record);
+                    importati++;
+                });
+                localStorage.setItem('prodotti', JSON.stringify(prodotti));
+                renderProdotti();
+                toast(importati + ' elementi importati');
+            } catch (err) {
+                toast('File non leggibile — controlla il formato');
+            }
+            e.target.value = '';
+        });
+
+        // ===== EXPORT CSV (apribile direttamente in Excel) =====
+        // ===== MOTORE XLSX INTERNO (nessuna libreria esterna): costruisce un file .xlsx vero =====
+        function crc32(buf) {
+            if (!crc32.table) {
+                const t = [];
+                for (let n = 0; n < 256; n++) {
+                    let c = n;
+                    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                    t[n] = c;
+                }
+                crc32.table = t;
+            }
+            let crc = 0 ^ -1;
+            for (let i = 0; i < buf.length; i++) crc = (crc >>> 8) ^ crc32.table[(crc ^ buf[i]) & 0xFF];
+            return (crc ^ -1) >>> 0;
+        }
+
+        function buildZip(files) {
+            const enc = new TextEncoder();
+            const localParts = [];
+            const central = [];
+            let offset = 0;
+            const now = new Date();
+            const dosTime = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xFFFF;
+            const dosDate = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xFFFF;
+
+            files.forEach(f => {
+                const nameBytes = enc.encode(f.name);
+                const data = f.data;
+                const crc = crc32(data);
+                const size = data.length;
+
+                const local = new Uint8Array(30 + nameBytes.length);
+                const dv = new DataView(local.buffer);
+                dv.setUint32(0, 0x04034b50, true);
+                dv.setUint16(4, 20, true);
+                dv.setUint16(6, 0, true);
+                dv.setUint16(8, 0, true);
+                dv.setUint16(10, dosTime, true);
+                dv.setUint16(12, dosDate, true);
+                dv.setUint32(14, crc, true);
+                dv.setUint32(18, size, true);
+                dv.setUint32(22, size, true);
+                dv.setUint16(26, nameBytes.length, true);
+                dv.setUint16(28, 0, true);
+                local.set(nameBytes, 30);
+                localParts.push(local, data);
+
+                const ch = new Uint8Array(46 + nameBytes.length);
+                const cdv = new DataView(ch.buffer);
+                cdv.setUint32(0, 0x02014b50, true);
+                cdv.setUint16(4, 20, true);
+                cdv.setUint16(6, 20, true);
+                cdv.setUint16(8, 0, true);
+                cdv.setUint16(10, 0, true);
+                cdv.setUint16(12, dosTime, true);
+                cdv.setUint16(14, dosDate, true);
+                cdv.setUint32(16, crc, true);
+                cdv.setUint32(20, size, true);
+                cdv.setUint32(24, size, true);
+                cdv.setUint16(28, nameBytes.length, true);
+                cdv.setUint32(38, 0, true);
+                cdv.setUint32(42, offset, true);
+                ch.set(nameBytes, 46);
+                central.push(ch);
+
+                offset += local.length + data.length;
+            });
+
+            const centralStart = offset;
+            let centralSize = 0;
+            central.forEach(c => centralSize += c.length);
+
+            const eocd = new Uint8Array(22);
+            const edv = new DataView(eocd.buffer);
+            edv.setUint32(0, 0x06054b50, true);
+            edv.setUint16(8, files.length, true);
+            edv.setUint16(10, files.length, true);
+            edv.setUint32(12, centralSize, true);
+            edv.setUint32(16, centralStart, true);
+
+            const allParts = [...localParts, ...central, eocd];
+            let totalLen = 0;
+            allParts.forEach(p => totalLen += p.length);
+            const result = new Uint8Array(totalLen);
+            let pos = 0;
+            allParts.forEach(p => { result.set(p, pos); pos += p.length; });
+            return result;
+        }
+
+        function xmlEscape(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function colLetter(idx) { return String.fromCharCode(65 + idx); }
+
+        // headers: array di stringhe. rows: array di array di valori. numericCols: Set di indici colonna numerici.
+        function buildXlsxBytes(headers, rows, numericCols, template) {
+            const enc = new TextEncoder();
+            numericCols = numericCols || new Set();
+            const hasTemplate = !!(template && (template.stylesXml || template.colsXml));
+
+            function styleAttr(map, i) {
+                return (map && map[i] !== undefined) ? ` s="${map[i]}"` : '';
+            }
+
+            let rowsXml = '';
+            const headerCells = headers.map((h, i) => `<c r="${colLetter(i)}1"${styleAttr(template && template.headerStyles, i)} t="inlineStr"><is><t>${xmlEscape(h)}</t></is></c>`).join('');
+            rowsXml += `<row r="1">${headerCells}</row>`;
+            rows.forEach((row, r) => {
+                const rn = r + 2;
+                const cells = row.map((v, i) => {
+                    const ref = colLetter(i) + rn;
+                    const s = styleAttr(template && template.dataStyles, i);
+                    if (numericCols.has(i)) {
+                        const num = parseFloat(v);
+                        return `<c r="${ref}"${s}><v>${isNaN(num) ? 0 : num}</v></c>`;
+                    }
+                    return `<c r="${ref}"${s} t="inlineStr"><is><t>${xmlEscape(v)}</t></is></c>`;
+                }).join('');
+                rowsXml += `<row r="${rn}">${cells}</row>`;
+            });
+
+            const colsXml = (template && template.colsXml) ? template.colsXml : '';
+            const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${colsXml}<sheetData>${rowsXml}</sheetData></worksheet>`;
+
+            const stylesPart = hasTemplate && template.stylesXml ? template.stylesXml : null;
+
+            const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>${stylesPart ? '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' : ''}</Types>`;
+            const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+            const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Foglio1" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+            const workbookRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>${stylesPart ? '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' : ''}</Relationships>`;
+
+            const files = [
+                { name: '[Content_Types].xml', data: enc.encode(contentTypes) },
+                { name: '_rels/.rels', data: enc.encode(rootRels) },
+                { name: 'xl/workbook.xml', data: enc.encode(workbookXml) },
+                { name: 'xl/_rels/workbook.xml.rels', data: enc.encode(workbookRels) },
+                { name: 'xl/worksheets/sheet1.xml', data: enc.encode(sheetXml) }
+            ];
+            if (stylesPart) files.push({ name: 'xl/styles.xml', data: enc.encode(stylesPart) });
+            return buildZip(files);
+        }
+
+        function downloadXLSX(filename, headers, rows, numericCols, template) {
+            const bytes = buildXlsxBytes(headers, rows, numericCols, template);
+            salvaBytes(filename, bytes, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        }
+
+        // ===== LETTORE XLSX (nessuna libreria esterna): legge file .xlsx reali da importare =====
+        function readZipEntries(bytes) {
+            let eocdOffset = -1;
+            for (let i = bytes.length - 22; i >= 0; i--) {
+                if (bytes[i] === 0x50 && bytes[i + 1] === 0x4b && bytes[i + 2] === 0x05 && bytes[i + 3] === 0x06) { eocdOffset = i; break; }
+            }
+            if (eocdOffset === -1) throw new Error('File non è un archivio ZIP/XLSX valido');
+            const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+            const entryCount = dv.getUint16(eocdOffset + 10, true);
+            const cdOffset = dv.getUint32(eocdOffset + 16, true);
+            const entries = {};
+            let p = cdOffset;
+            for (let i = 0; i < entryCount; i++) {
+                if (dv.getUint32(p, true) !== 0x02014b50) break;
+                const compMethod = dv.getUint16(p + 10, true);
+                const compSize = dv.getUint32(p + 20, true);
+                const nameLen = dv.getUint16(p + 28, true);
+                const extraLen = dv.getUint16(p + 30, true);
+                const commentLen = dv.getUint16(p + 32, true);
+                const localOffset = dv.getUint32(p + 42, true);
+                const name = new TextDecoder().decode(bytes.slice(p + 46, p + 46 + nameLen));
+                entries[name] = { compMethod, compSize, localOffset };
+                p += 46 + nameLen + extraLen + commentLen;
+            }
+            return entries;
+        }
+
+        async function extractZipEntry(bytes, entry) {
+            const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+            const lo = entry.localOffset;
+            const nameLen = dv.getUint16(lo + 26, true);
+            const extraLen = dv.getUint16(lo + 28, true);
+            const dataStart = lo + 30 + nameLen + extraLen;
+            const raw = bytes.slice(dataStart, dataStart + entry.compSize);
+            if (entry.compMethod === 0) return raw;
+            const stream = new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+            return new Uint8Array(await new Response(stream).arrayBuffer());
+        }
+
+        function xmlUnescape(s) {
+            return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+        }
+
+        // Restituisce righe nello stesso formato di parseCSV: array di oggetti {intestazione_minuscola: valore}
+        async function parseXlsxToRows(arrayBuffer) {
+            const bytes = new Uint8Array(arrayBuffer);
+            const entries = readZipEntries(bytes);
+
+            let sharedStrings = [];
+            if (entries['xl/sharedStrings.xml']) {
+                const ssXml = new TextDecoder('utf-8').decode(await extractZipEntry(bytes, entries['xl/sharedStrings.xml']));
+                const siMatches = ssXml.match(/<si>[\s\S]*?<\/si>/g) || [];
+                sharedStrings = siMatches.map(si => {
+                    const parts = si.match(/<t[^>]*>([\s\S]*?)<\/t>/g) || [];
+                    return parts.map(p => xmlUnescape(p.replace(/<[^>]*>/g, ''))).join('');
+                });
+            }
+
+            let sheetName = null;
+            for (let i = 1; i <= 10; i++) {
+                const n = `xl/worksheets/sheet${i}.xml`;
+                if (entries[n]) { sheetName = n; break; }
+            }
+            if (!sheetName) throw new Error('Nessun foglio trovato nel file Excel');
+
+            const sheetXml = new TextDecoder('utf-8').decode(await extractZipEntry(bytes, entries[sheetName]));
+            const rowMatches = sheetXml.match(/<row[^>]*\/>|<row[^>]*>[\s\S]*?<\/row>/g) || [];
+            const grid = [];
+            rowMatches.forEach(rowXml => {
+                const cellMatches = rowXml.match(/<c[^>]*\/>|<c[^>]*>[\s\S]*?<\/c>/g) || [];
+                const rowData = {};
+                cellMatches.forEach(cellXml => {
+                    const refMatch = cellXml.match(/r="([A-Z]+)\d+"/);
+                    if (!refMatch) return;
+                    const letters = refMatch[1];
+                    let colIdx = 0;
+                    for (let i = 0; i < letters.length; i++) colIdx = colIdx * 26 + (letters.charCodeAt(i) - 64);
+                    colIdx -= 1;
+                    const typeMatch = cellXml.match(/t="([^"]+)"/);
+                    const type = typeMatch ? typeMatch[1] : null;
+                    let value = '';
+                    if (type === 'inlineStr') {
+                        const m = cellXml.match(/<t[^>]*>([\s\S]*?)<\/t>/);
+                        value = m ? xmlUnescape(m[1]) : '';
+                    } else if (type === 's') {
+                        const m = cellXml.match(/<v>([\s\S]*?)<\/v>/);
+                        value = m ? (sharedStrings[parseInt(m[1], 10)] || '') : '';
+                    } else {
+                        const m = cellXml.match(/<v>([\s\S]*?)<\/v>/);
+                        value = m ? xmlUnescape(m[1]) : '';
+                        // Excel a volte memorizza un numero con molte cifre (es. Partita IVA, CAP)
+                        // in notazione scientifica nell'XML grezzo (es. "2.963740598E9") anche se lo
+                        // mostra normalmente nella cella: lo riportiamo alla forma decimale "normale".
+                        if (/^-?\d*\.?\d+e[+-]?\d+$/i.test(value)) {
+                            const num = Number(value);
+                            if (Number.isFinite(num)) value = num.toString();
+                        }
+                        // Excel a volte memorizza un numero "intero" come 4014.0 anche se lo mostra
+                        // come 4014 (es. CAP): togliamo lo ".0"/".00" superfluo per non farlo comparire.
+                        if (/^-?\d+\.0+$/.test(value)) value = value.split('.')[0];
+                    }
+                    rowData[colIdx] = value;
+                });
+                grid.push(rowData);
+            });
+
+            if (grid.length === 0) return [];
+            let maxCol = -1;
+            grid.forEach(r => Object.keys(r).forEach(k => { if (+k > maxCol) maxCol = +k; }));
+            const headers = [];
+            for (let c = 0; c <= maxCol; c++) headers.push((grid[0][c] || '').toLowerCase().trim());
+            const rows = [];
+            for (let r = 1; r < grid.length; r++) {
+                const obj = {};
+                for (let c = 0; c <= maxCol; c++) obj[headers[c]] = grid[r][c] !== undefined ? String(grid[r][c]) : '';
+                rows.push(obj);
+            }
+            return rows;
+        }
+
+        // Estrae dal file XLSX importato: il foglio stili originale, le larghezze colonna e quale stile
+        // usano le celle di intestazione e quelle delle righe dati — per poterli riproporre in esportazione.
+        async function extractXlsxTemplate(bytes) {
+            try {
+                const entries = readZipEntries(bytes);
+                let stylesXml = null;
+                if (entries['xl/styles.xml']) {
+                    stylesXml = new TextDecoder('utf-8').decode(await extractZipEntry(bytes, entries['xl/styles.xml']));
+                }
+                let sheetName = null;
+                for (let i = 1; i <= 10; i++) {
+                    const n = `xl/worksheets/sheet${i}.xml`;
+                    if (entries[n]) { sheetName = n; break; }
+                }
+                if (!sheetName) return null;
+                const sheetXml = new TextDecoder('utf-8').decode(await extractZipEntry(bytes, entries[sheetName]));
+
+                const colsMatch = sheetXml.match(/<cols>[\s\S]*?<\/cols>/);
+                const colsXml = colsMatch ? colsMatch[0] : null;
+
+                function getRowStyles(rowNum) {
+                    const rowMatch = sheetXml.match(new RegExp(`<row r="${rowNum}"[^>]*>[\\s\\S]*?<\\/row>`));
+                    if (!rowMatch) return {};
+                    const cellMatches = rowMatch[0].match(/<c[^>]*\/>|<c[^>]*>[\s\S]*?<\/c>/g) || [];
+                    const styles = {};
+                    cellMatches.forEach(c => {
+                        const refMatch = c.match(/r="([A-Z]+)\d+"/);
+                        const styleMatch = c.match(/\ss="(\d+)"/);
+                        if (refMatch && styleMatch) {
+                            const letters = refMatch[1];
+                            let colIdx = 0;
+                            for (let i = 0; i < letters.length; i++) colIdx = colIdx * 26 + (letters.charCodeAt(i) - 64);
+                            colIdx -= 1;
+                            styles[colIdx] = styleMatch[1];
+                        }
+                    });
+                    return styles;
+                }
+
+                return { stylesXml, colsXml, headerStyles: getRowStyles(1), dataStyles: getRowStyles(2) };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Legge un file (CSV o XLSX, riconosciuto dall'estensione) e restituisce le righe pronte per pickField.
+        // Se è un XLSX, salva anche il "modello" di formattazione sotto la chiave indicata, per riusarlo in esportazione.
+        async function leggiRigheDaFile(file, templateStorageKey) {
+            if (/\.xlsx$/i.test(file.name)) {
+                const buf = await file.arrayBuffer();
+                if (templateStorageKey) {
+                    const template = await extractXlsxTemplate(new Uint8Array(buf));
+                    if (template) localStorage.setItem(templateStorageKey, JSON.stringify(template));
+                }
+                return await parseXlsxToRows(buf);
+            }
+            return parseCSV(await file.text());
+        }
+
+        document.getElementById('btn-export-clienti-xlsx').addEventListener('click', () => {
+            const clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
+            const rows = clienti.map(c => {
+                const legacy = c.comune === undefined ? splitLocalitaLegacy(c.localita) : null;
+                return [
+                    c.nome, c.indirizzo,
+                    c.comune !== undefined ? c.comune : legacy.comune,
+                    padCodiceNumerico(c.cap !== undefined ? c.cap : legacy.cap, 5),
+                    c.provincia || '',
+                    padCodiceNumerico(c.piva, 11), c.cf, (c.sdi || c.univoco || ''), c.pec, c.email || '', c.tel || '', c.cellulare || ''
+                ];
+            });
+            const templateRaw = localStorage.getItem('clientiXlsxTemplate');
+            const template = templateRaw ? JSON.parse(templateRaw) : null;
+            downloadXLSX('AllDocs_Clienti.xlsx', ['Ragione Sociale', 'Indirizzo', 'Comune', 'CAP', 'Provincia', 'P.IVA', 'Codice Fiscale', 'Codice Destinatario/Univoco', 'PEC', 'Email', 'Telefono', 'Cellulare'], rows, null, template);
+            toast('Excel clienti scaricato');
+        });
+
+        document.getElementById('btn-export-prodotti-xlsx').addEventListener('click', () => {
+            const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
+            const rows = prodotti.map(p => [p.brand, p.linea, p.desc, p.qta || 1, p.prezzo]);
+            const templateRaw = localStorage.getItem('prodottiXlsxTemplate');
+            const template = templateRaw ? JSON.parse(templateRaw) : null;
+            downloadXLSX('AllDocs_BeniServizi.xlsx', ['Brand', 'Linea', 'Descrizione Bene o Servizio', 'Q.tà', 'Prezzo'], rows, new Set([3, 4]), template);
+            toast('Excel Beni e Servizi scaricato');
+        });
+
+        document.getElementById('btn-svuota-clienti').addEventListener('click', () => {
+            localStorage.setItem('clienti', '[]');
+            renderClienti();
+            toast('Dati clienti cancellati');
+        });
+        document.getElementById('btn-svuota-prodotti').addEventListener('click', () => {
+            localStorage.setItem('prodotti', '[]');
+            renderProdotti();
+            toast('Beni e Servizi cancellati');
+        });
+
+        // ===== BACKUP / IMPORT =====
+        document.getElementById('btn-export').addEventListener('click', () => {
+            const backup = {
+                clienti: JSON.parse(localStorage.getItem('clienti') || '[]'),
+                prodotti: JSON.parse(localStorage.getItem('prodotti') || '[]'),
+                azienda: JSON.parse(localStorage.getItem('azienda') || '{}'),
+                notaDefault: localStorage.getItem('notaDefault') || '',
+                documentiArchivio: JSON.parse(localStorage.getItem('documentiArchivio') || '[]'),
+                contatoriDocumenti: JSON.parse(localStorage.getItem('contatoriDocumenti') || '{}'),
+                clientiXlsxTemplate: JSON.parse(localStorage.getItem('clientiXlsxTemplate') || 'null'),
+                prodottiXlsxTemplate: JSON.parse(localStorage.getItem('prodottiXlsxTemplate') || 'null')
+            };
+            const jsonBytes = new TextEncoder().encode(JSON.stringify(backup, null, 2));
+            salvaBytes('AllDocs_Backup_' + new Date().toISOString().slice(0, 10) + '.json', jsonBytes, 'application/json');
+            toast('Backup scaricato');
+        });
+
+        document.getElementById('import-file').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const data = JSON.parse(evt.target.result);
+                    if (data.clienti) localStorage.setItem('clienti', JSON.stringify(data.clienti));
+                    if (data.prodotti) localStorage.setItem('prodotti', JSON.stringify(data.prodotti));
+                    if (data.azienda) localStorage.setItem('azienda', JSON.stringify(data.azienda));
+                    if (data.notaDefault !== undefined) localStorage.setItem('notaDefault', data.notaDefault);
+                    if (data.documentiArchivio) localStorage.setItem('documentiArchivio', JSON.stringify(data.documentiArchivio));
+                    if (data.contatoriDocumenti) localStorage.setItem('contatoriDocumenti', JSON.stringify(data.contatoriDocumenti));
+                    if (data.clientiXlsxTemplate) localStorage.setItem('clientiXlsxTemplate', JSON.stringify(data.clientiXlsxTemplate));
+                    if (data.prodottiXlsxTemplate) localStorage.setItem('prodottiXlsxTemplate', JSON.stringify(data.prodottiXlsxTemplate));
+                    toast('Backup importato — ricarica la pagina per applicarlo');
+                } catch (err) {
+                    toast('File non valido');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // ===== INIT =====
+        addRiga();
+        renderClienti();
+        renderProdotti();
+    </script>
+</body>
+</html>
