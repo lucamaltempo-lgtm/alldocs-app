@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preventivi & Ordini Offline</title>
+    <title>AllDocs</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -90,7 +90,12 @@
         }
         textarea {
             resize: vertical;
-            min-height: 80px;
+            min-height: 36px;
+        }
+        #doc-note {
+            min-height: 26px;
+            padding: 5px 10px;
+            line-height: 1.3;
         }
         input[type="file"] {
             padding: 8px;
@@ -131,7 +136,76 @@
         .btn.secondary:hover {
             background: #d0d0d0;
         }
-        
+        .dati-actions {
+            gap: 6px;
+        }
+        .dati-actions .btn {
+            padding: 7px 10px;
+            font-size: 11px;
+        }
+        .articoli-actions-riga {
+            flex-wrap: nowrap;
+            align-items: center;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .articoli-actions-riga .btn {
+            flex-shrink: 0;
+        }
+        @media (max-width: 480px) {
+            .articoli-actions-riga {
+                flex-wrap: wrap;
+                overflow-x: visible;
+            }
+        }
+        /* Il selettore del tipo documento è stilizzato come gli altri pulsanti grigi
+           "di scelta" dell'app, invece del classico menu a tendina bianco di sistema. */
+        #doc-tipo {
+            background: #e0e0e0;
+            color: #333;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+        #doc-tipo:hover {
+            background: #d0d0d0;
+        }
+
+        /* Cursori Dimensione/Intensità del Logo: più grandi e facili da toccare da cellulare
+           (traccia e "pallino" più spessi rispetto ai cursori di sistema predefiniti). */
+        #logo-sliders input[type="range"] {
+            width: 100%;
+            height: 34px;
+            margin: 0;
+        }
+        #logo-sliders input[type="range"]::-webkit-slider-runnable-track {
+            height: 8px;
+            border-radius: 4px;
+            background: #ccc;
+        }
+        #logo-sliders input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #1a5f96;
+            margin-top: -11px;
+            cursor: pointer;
+        }
+        #logo-sliders input[type="range"]::-moz-range-track {
+            height: 8px;
+            border-radius: 4px;
+            background: #ccc;
+        }
+        #logo-sliders input[type="range"]::-moz-range-thumb {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #1a5f96;
+            border: none;
+            cursor: pointer;
+        }
+
         /* Table styling */
         table {
             width: 100%;
@@ -166,7 +240,7 @@
             padding: 6px;
             font-size: 12px;
         }
-        /* Più campi per riga nell'Anagrafica Fornitore (troppo lunga se un campo per riga come
+        /* Più campi per riga nell'Anagrafica Azienda (troppo lunga se un campo per riga come
            per il Cliente): quanti ce ne stanno, in base allo spazio disponibile, con un minimo
            di larghezza per non farli diventare illeggibili su schermi stretti. */
         .anagrafica-grid {
@@ -175,29 +249,44 @@
             gap: 4px 12px;
         }
         td {
-            padding: 6px 4px;
+            padding: 6px 2px;
             border: 1px solid #ddd;
             font-size: 11px;
             overflow: hidden;
         }
-        td input {
+        td input,
+        td input[type="text"],
+        td input[type="number"] {
             width: 100%;
             border: none;
-            font-size: 11px;
-            padding: 2px;
+            font-size: 10px;
+            padding: 1px;
             min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        td input::placeholder,
+        td input[type="text"]::placeholder,
+        td input[type="number"]::placeholder {
+            font-size: 10px;
+            color: #999;
+        }
+        td input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        td input[type="number"]::-webkit-outer-spin-button,
+        td input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
         tr:nth-child(even) {
             background: #f9f9f9;
         }
         .content { overflow-x: hidden; }
-        .campo-extra {
-            display: none;
-            margin-bottom: 4px;
-        }
-        #righe-body.mostra-extra .campo-extra {
-            display: block;
-        }
+        /* Le colonne Brand/Linea/Sconto/Sconto2 restano SEMPRE visibili nella tabella di
+           inserimento (tab Documento), qualunque sia lo stato della loro casella di spunta: quella
+           casella decide solo se la colonna compare in Anteprima e nel PDF. */
         .table-wrap {
             width: 100%;
             overflow: hidden;
@@ -211,15 +300,19 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        .articoli-table-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
         @media (max-width: 480px) {
             .content { padding: 15px; }
             th, td { font-size: 10px; padding: 4px 2px; }
-            #righe-body th:nth-child(1), #righe-body td:nth-child(1) { width: 34%; }
-            #righe-body th:nth-child(2), #righe-body td:nth-child(2) { width: 14%; }
-            #righe-body th:nth-child(3), #righe-body td:nth-child(3) { width: 18%; }
-            #righe-body th:nth-child(4), #righe-body td:nth-child(4) { width: 14%; }
-            #righe-body th:nth-child(5), #righe-body td:nth-child(5) { width: 20%; }
+            .articoli-table-scroll table { min-width: 680px; }
             .row { grid-template-columns: 1fr; gap: 10px; }
+            /* Da cellulare i 4 riquadri (Azienda, Logo, Documento, Cliente) si impilano uno sotto
+               l'altro invece di stare due per riga, così ognuno usa tutta la larghezza disponibile.
+               (!important necessario: la larghezza delle colonne è impostata inline sull'elemento) */
+            #documento-grid { grid-template-columns: 1fr !important; }
         }
         
         /* Preview styling */
@@ -234,7 +327,7 @@
             page-break-after: always;
         }
         @media (max-width: 480px) {
-            #preview-container { padding: 10px; }
+            #preview-container { padding: 10px; min-height: 0; }
             .content { padding: 8px; }
         }
         
@@ -291,10 +384,10 @@
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
-            border: 2px solid #333;
+            border: 1px solid #e6e6e6;
             table-layout: fixed;
         }
-        
+
         .preview-table th {
             background: transparent;
             color: #1a1a1a;
@@ -302,17 +395,17 @@
             text-align: center;
             font-weight: 700;
             font-size: 10px;
-            border-bottom: 2px solid #333;
+            border-bottom: 1px solid #e6e6e6;
             border-top: none;
             border-left: none;
             border-right: none;
             overflow: hidden;
         }
-        
+
         .preview-table td {
             padding: 6px 2px;
             border: none;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #e6e6e6;
             font-size: 10px;
             text-align: center;
             overflow-wrap: break-word;
@@ -346,18 +439,25 @@
             .preview-table th, .preview-table td { font-size: 8px; padding: 5px 1px; }
         }
         
-        .preview-notes {
+        .preview-notes-row {
             position: absolute;
             bottom: 8px;
             left: 30px;
             width: calc(100% - 60px);
-            height: 70px;
-            padding: 12px 15px;
+            display: flex;
+            align-items: stretch;
+            gap: 6px;
+        }
+        .preview-notes {
+            flex: 1;
+            min-width: 0;
+            height: 22px;
+            padding: 3px 15px;
             border: 1px solid #ccc;
             background: transparent;
             font-family: 'Arial', sans-serif;
             font-size: 11px;
-            line-height: 1.5;
+            line-height: 1.3;
             text-align: left;
             box-sizing: border-box;
             resize: vertical;
@@ -367,8 +467,19 @@
             outline: 2px solid #1a5f96;
             border-color: #1a5f96;
         }
+        .preview-notes-save {
+            flex-shrink: 0;
+            padding: 0 12px;
+            font-size: 11px;
+        }
         @media (max-width: 480px) {
-            .preview-notes { left: 10px; width: calc(100% - 20px); }
+            .preview-notes-row {
+                position: static;
+                left: auto;
+                bottom: auto;
+                width: auto;
+                margin-top: 14px;
+            }
         }
 
         .preview-logo-bottom {
@@ -419,10 +530,210 @@
             border-radius: 4px;
             margin-top: 10px;
         }
+        input[type="range"] {
+            width: 100%;
+            padding: 0;
+            height: 30px;
+            background: transparent;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 8px;
+            border-radius: 4px;
+            background: #ddd;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #1a5f96;
+            margin-top: -9px;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type="range"]::-moz-range-track {
+            height: 8px;
+            border-radius: 4px;
+            background: #ddd;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #1a5f96;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* ===== SCHERMATA DI BENVENUTO ===== */
+        body.has-splash { overflow: hidden; }
+        .splash-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            padding: 24px;
+            text-align: center;
+            background:
+                radial-gradient(circle at 18% 12%, rgba(212,165,116,0.28), transparent 45%),
+                radial-gradient(circle at 88% 88%, rgba(255,255,255,0.10), transparent 42%),
+                linear-gradient(155deg, #0f3d63 0%, #1a5f96 55%, #0e2e4a 100%);
+            color: #fff;
+            overflow: hidden;
+        }
+        .splash-icon-wrap {
+            position: relative;
+            width: 270px;
+            height: 230px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            animation: splashPop 0.6s cubic-bezier(.2,.8,.2,1) forwards;
+        }
+        .splash-icon {
+            width: 152px;
+            height: auto;
+            filter: drop-shadow(0 20px 22px rgba(0,0,0,0.42));
+            transform: perspective(700px) rotateY(-14deg) rotateX(6deg);
+        }
+        .splash-coin {
+            position: absolute;
+            font-weight: 800;
+            line-height: 1;
+            background: linear-gradient(180deg, #f8e9c6 0%, #d4a574 55%, #9c7440 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            -webkit-text-stroke: 0.6px rgba(255,255,255,0.35);
+            filter: drop-shadow(0 4px 7px rgba(0,0,0,0.4));
+        }
+        .splash-coin-euro { top: 4px; left: 18px; font-size: 62px; }
+        .splash-coin-dollar { top: 8px; right: 26px; font-size: 52px; }
+        .splash-coin-pound { bottom: 0px; left: 34px; font-size: 48px; }
+        .splash-pen {
+            position: absolute;
+            width: 120px;
+            bottom: 6px;
+            left: -10px;
+            transform-origin: 92% 50%;
+            transform: rotate(135deg);
+            filter: drop-shadow(0 8px 10px rgba(0,0,0,0.4));
+        }
+        .splash-title {
+            margin-top: 4px;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 38px;
+            font-weight: 700;
+            font-style: italic;
+            letter-spacing: 1.5px;
+            background: linear-gradient(180deg, #ffffff 0%, #f3e6c8 50%, #d4a574 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
+            opacity: 0;
+            animation: splashFadeUp 0.5s ease-out 0.2s forwards;
+        }
+        .splash-sub {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #cfe0ee;
+            opacity: 0;
+            animation: splashFadeUp 0.5s ease-out 0.42s forwards;
+        }
+        .splash-btn {
+            margin-top: 26px;
+            padding: 24px 70px;
+            border: none;
+            background: #fff;
+            border-radius: 40px;
+            cursor: pointer;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.3);
+            opacity: 0;
+            animation: splashFadeUp 0.5s ease-out 0.58s forwards;
+            transition: transform 0.15s ease;
+        }
+        .splash-btn:active { transform: scale(0.96); }
+        .splash-btn-text {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 32px;
+            font-weight: 700;
+            font-style: italic;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: linear-gradient(180deg, #f3e6c8 0%, #d4a574 55%, #a9793f 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        @keyframes splashPop {
+            from { transform: scale(0.85); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes splashFadeUp {
+            from { transform: translateY(6px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
     </style>
 </head>
-<body>
-    <div style="position:fixed; bottom:2px; right:6px; font-size:9px; color:#bbb; z-index:9999; pointer-events:none;">v2026-09-19.1</div>
+<body class="has-splash">
+    <div id="splash-screen" class="splash-screen">
+        <div class="splash-icon-wrap">
+            <svg class="splash-icon" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="docGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#ffffff"/>
+                        <stop offset="100%" stop-color="#e6ecf2"/>
+                    </linearGradient>
+                    <linearGradient id="cornerGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#f8e9c6"/>
+                        <stop offset="100%" stop-color="#b8895a"/>
+                    </linearGradient>
+                </defs>
+                <path d="M22 10 H58 L74 26 V86 H22 Z" fill="url(#docGrad)"/>
+                <path d="M58 10 L74 26 H58 Z" fill="url(#cornerGrad)"/>
+                <rect x="31" y="42" width="34" height="5" rx="2.5" fill="#1a5f96"/>
+                <rect x="31" y="54" width="34" height="5" rx="2.5" fill="#1a5f96"/>
+                <rect x="31" y="66" width="20" height="5" rx="2.5" fill="#1a5f96"/>
+            </svg>
+            <span class="splash-coin splash-coin-euro">€</span>
+            <span class="splash-coin splash-coin-dollar">$</span>
+            <span class="splash-coin splash-coin-pound">£</span>
+            <svg class="splash-pen" viewBox="0 0 160 30" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="penBody" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#4a4a4a"/>
+                        <stop offset="35%" stop-color="#161616"/>
+                        <stop offset="100%" stop-color="#000000"/>
+                    </linearGradient>
+                    <linearGradient id="penGold" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#f5e2b8"/>
+                        <stop offset="50%" stop-color="#d4a574"/>
+                        <stop offset="100%" stop-color="#9c7440"/>
+                    </linearGradient>
+                </defs>
+                <rect x="10" y="8" width="96" height="16" rx="8" fill="url(#penBody)"/>
+                <rect x="16" y="10" width="80" height="2.5" rx="1.2" fill="rgba(255,255,255,0.32)"/>
+                <rect x="20" y="1" width="3" height="9" rx="1.5" fill="url(#penGold)"/>
+                <rect x="100" y="6" width="4" height="20" fill="url(#penGold)"/>
+                <rect x="107" y="6" width="2.5" height="20" fill="url(#penGold)"/>
+                <path d="M104 10 L146 15 L104 22 Z" fill="url(#penBody)"/>
+                <path d="M136 13.3 L154 15 L136 16.7 Z" fill="url(#penGold)"/>
+            </svg>
+        </div>
+        <div class="splash-title">AllDocs</div>
+        <div class="splash-sub">100% Offline</div>
+        <button type="button" class="splash-btn" id="btn-splash-start"><span class="splash-btn-text">Iniziamo</span></button>
+    </div>
+    <div style="position:fixed; bottom:2px; right:6px; font-size:9px; color:#bbb; z-index:9999; pointer-events:none;">v2026-09-19.40</div>
     <div class="container">
         <div class="tabs">
             <button class="tab-btn active" data-tab="documento">Documento</button>
@@ -434,215 +745,19 @@
             <!-- TAB: DOCUMENTO -->
             <div class="tab-pane active" id="tab-documento">
                 <h2 style="margin-bottom: 20px; color: #1a5f96;">📝 Nuovo Documento</h2>
-                
-                <input type="file" id="logo-file" accept="image/jpeg,image/png" style="display:none">
-                <div class="actions">
-                    <button class="btn secondary" onclick="document.getElementById('logo-file').click()">Importa Logo (JPEG/PNG)</button>
-                </div>
-                <div id="logo-preview"></div>
 
-                <div class="row" style="margin-top: 12px;">
-                    <div class="form-group">
-                        <label>Posizionamento Logo</label>
-                        <select id="logo-position">
-                            <option value="top">Centro Pagina - Alto</option>
-                            <option value="bottom">Centro Pagina - Basso</option>
-                            <option value="center">Sfondo Centrale</option>
-                        </select>
+                <div id="documento-grid" style="display:grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 15px;">
+                    <div id="azienda-box" style="border: 1px solid #ddd; border-radius: 6px; padding: 15px; min-width: 0;">
+                        <h3 style="margin-top: 0; margin-bottom: 15px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 10px;">Azienda</h3>
+                        <div id="azienda-preview" style="font-size:12px; color:#333; line-height:1.5;"></div>
+                        <div class="actions" id="azienda-actions" style="margin-top:10px;">
+                            <button class="btn secondary" id="btn-nuovo-azienda">Nuovo</button>
+                            <button class="btn secondary" id="btn-modifica-azienda" style="display:none;">Modifica</button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Dimensione Logo (larghezza)</label>
-                        <input type="range" id="logo-size" min="40" max="450" value="110">
-                    </div>
-                </div>
-                <div class="form-group" id="logo-watermark-opts">
-                    <label>Intensità (opacità)</label>
-                    <input type="range" id="logo-opacity" min="5" max="100" value="100">
-                </div>
-                <input type="hidden" id="logo-tint" value="none">
-                
-                <div class="form-group">
-                    <label>Tipo Documento</label>
-                    <select id="doc-tipo">
-                        <option value="Preventivo">Preventivo</option>
-                        <option value="Ordine">Ordine</option>
-                        <option value="Proforma">Proforma</option>
-                        <option value="Fattura">Fattura</option>
-                        <option value="DDT">Documento di Trasporto (DDT)</option>
-                    </select>
-                </div>
 
-                <div class="row" style="border: 1.5px solid #333; border-radius: 4px; padding: 10px; margin-bottom: 18px;">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>Numero</label>
-                        <input type="number" id="doc-numero" placeholder="es. 001">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>Data</label>
-                        <input type="date" id="doc-data" style="text-align:center;">
-                    </div>
-                </div>
-
-                <div id="ddt-dettagli" style="display:none; border: 1.5px solid #333; border-radius: 4px; padding: 10px; margin-bottom: 18px;">
-                    <p style="font-size: 11px; color: #888; margin: 0 0 10px;">Dati obbligatori per il Documento di Trasporto (DPR 472/1996)</p>
-                    <div class="form-group">
-                        <label>Causale del Trasporto</label>
-                        <input type="text" id="ddt-causale" placeholder="Es. Vendita" list="causali-datalist" autocomplete="off">
-                        <datalist id="causali-datalist">
-                            <option value="Vendita">
-                            <option value="Conto lavorazione">
-                            <option value="Reso">
-                            <option value="Omaggio">
-                            <option value="Visione/Prova">
-                        </datalist>
-                    </div>
-                    <div class="form-group">
-                        <label>Aspetto Esteriore dei Beni</label>
-                        <input type="text" id="ddt-aspetto" placeholder="Es. N. 2 colli" list="aspetto-datalist" autocomplete="off">
-                        <datalist id="aspetto-datalist">
-                            <option value="Scatola/e">
-                            <option value="Collo/i">
-                            <option value="Pallet">
-                            <option value="Pacco/hi">
-                            <option value="Sfuso">
-                        </datalist>
-                    </div>
-                    <div class="form-group">
-                        <label>Data e Ora Inizio Trasporto</label>
-                        <input type="datetime-local" id="ddt-data-ora">
-                    </div>
-                    <div class="form-group">
-                        <label>Vettore</label>
-                        <input type="text" id="ddt-vettore" placeholder="Es. Mittente, Destinatario, o ragione sociale del corriere">
-                    </div>
-                </div>
-
-                <h3 style="margin-top: 30px; margin-bottom: 15px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 10px;">Cliente</h3>
-                <div class="form-group">
-                    <label>Ragione Sociale</label>
-                    <input type="text" id="cl-nome" placeholder="Inserisci..." list="clienti-datalist" autocomplete="off">
-                    <datalist id="clienti-datalist"></datalist>
-                </div>
-                <div class="actions">
-                    <button class="btn secondary" id="btn-crea-nuovo-cliente">Crea nuovo</button>
-                </div>
-
-                <div id="cliente-dettagli" style="display:none; margin-top:15px;">
-                    <div class="form-group">
-                        <label>Indirizzo PEC</label>
-                        <input type="text" id="cl-pec" placeholder="Indirizzo PEC">
-                    </div>
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" id="cl-email" placeholder="Email">
-                    </div>
-                    <div class="form-group">
-                        <label>Codice SDI</label>
-                        <input type="text" id="cl-sdi" placeholder="Codice Destinatario (privati) o Codice Univoco (Pubblica Amministrazione)">
-                    </div>
-                    <div class="form-group">
-                        <label>Partita IVA</label>
-                        <input type="text" id="cl-piva" placeholder="Partita IVA">
-                    </div>
-                    <div class="form-group">
-                        <label>Codice Fiscale</label>
-                        <input type="text" id="cl-cf" placeholder="Codice Fiscale">
-                    </div>
-                    <div class="form-group">
-                        <label>Indirizzo</label>
-                        <input type="text" id="cl-indirizzo" placeholder="Via e numero civico">
-                    </div>
-                    <div class="form-group">
-                        <label>Comune</label>
-                        <input type="text" id="cl-comune" placeholder="Comune">
-                    </div>
-                    <div class="form-group">
-                        <label>CAP</label>
-                        <input type="text" id="cl-cap" placeholder="CAP">
-                    </div>
-                    <div class="form-group">
-                        <label>Prov.</label>
-                        <input type="text" id="cl-provincia" placeholder="Es. RM" maxlength="2" style="text-transform:uppercase;">
-                    </div>
-                    <div class="form-group">
-                        <label>Telefono</label>
-                        <input type="text" id="cl-tel" placeholder="Telefono">
-                    </div>
-                    <div class="form-group">
-                        <label>Cellulare</label>
-                        <input type="text" id="cl-cellulare" placeholder="Cellulare">
-                    </div>
-                    <div class="actions">
-                        <button class="btn secondary" id="btn-salva-cliente">Salva Cliente</button>
-                        <button class="btn secondary" id="btn-annulla-cliente">Annulla</button>
-                    </div>
-                </div>
-                
-                <h3 style="margin-top: 30px; margin-bottom: 4px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 10px;">Beni e Servizi</h3>
-                <p style="font-size: 11px; color: #888; margin: 6px 0 10px;">↺ = ripristina i valori originali</p>
-                <datalist id="prodotti-datalist"></datalist>
-
-                <table id="righe-body">
-                    <thead>
-                        <tr>
-                            <th style="width: 34%; text-align:center;">Descrizione Bene<br>o Servizio</th>
-                            <th style="width: 13%; text-align:center;">Q.tà<br><button class="btn secondary" id="btn-reset-qta-tutti" title="Ripristina Q.tà per tutti gli elementi" style="padding:1px 5px; font-size:9px; margin-top:2px;">↺</button></th>
-                            <th style="width: 16%; text-align:center;">Prezzo<br><button class="btn secondary" id="btn-reset-prezzo-tutti" title="Ripristina Prezzo per tutti gli elementi" style="padding:1px 5px; font-size:9px; margin-top:2px;">↺</button></th>
-                            <th style="width: 13%; text-align:center;">Sc.%<br><button class="btn secondary" id="btn-reset-sconto-tutti" title="Ripristina Sconto per tutti gli elementi" style="padding:1px 5px; font-size:9px; margin-top:2px;">↺</button></th>
-                            <th style="width: 16%; text-align:center;">Importo</th>
-                            <th style="width: 8%;"></th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-                
-                <div class="actions">
-                    <button class="btn secondary" id="btn-duplica-articolo">⧉ Duplica</button>
-                    <button class="btn secondary" id="btn-aggiungi-articolo">+ Aggiungi</button>
-                    <button class="btn secondary" id="btn-crea-nuovo-articolo">Crea nuovo</button>
-                </div>
-
-                <div class="actions" style="flex-wrap:wrap; margin-top:15px;">
-                    <input type="number" id="sconto-tutti-valore" placeholder="Sconto %" min="0" max="100" style="width:80px; padding:8px;">
-                    <button class="btn secondary" id="btn-applica-sconto-tutti">Applica a tutto</button>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border-left: 4px solid #1a5f96;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 13px;">
-                        <div><strong>Totale Sconti:</strong> <span id="tot-sconti" style="color: #1a5f96; font-weight: 700;">0,00 €</span></div>
-                        <div style="text-align: right;"><strong>Imponibile:</strong> <span id="tot-imponibile" style="color: #1a5f96; font-weight: 700;">0,00 €</span></div>
-                    </div>
-                </div>
-                
-                <div class="form-group" style="margin-top: 20px;">
-                    <label>Note a Piè di Pagina</label>
-                    <textarea id="doc-note" placeholder="Es: Validità 30 giorni&#10;Pagamento a mezzo bonifico&#10;ecc."></textarea>
-                    <p style="font-size: 11px; color: #888; margin-top: 4px;">Puoi impostare un testo predefinito nella tab "Anteprima".</p>
-                </div>
-                
-                <div class="actions">
-                    <button class="btn ochre" id="btn-pdf">Genera PDF</button>
-                    <button class="btn secondary" id="btn-condividi-pdf">📤 Condividi PDF</button>
-                </div>
-            </div>
-            
-            <!-- TAB: ANTEPRIMA -->            <!-- TAB: ANTEPRIMA -->
-            <div class="tab-pane" id="tab-anteprima">
-                <h2 style="margin-bottom: 20px; color: #1a5f96;">👁️ Anteprima Documento</h2>
-                <div id="preview-container"></div>
-
-                <div class="actions" style="margin-top: 20px;">
-                    <button class="btn secondary" id="btn-salva-nota-default">Salva nota a piè di pagina come predefinita</button>
-                    <button class="btn secondary" id="btn-reset-nota-default" title="Cancella la nota predefinita salvata su questo dispositivo/browser e ricarica quella impostata nell'app">↺ Ripristina nota predefinita</button>
-                </div>
-            </div>
-
-            <!-- TAB: DATI -->
-            <div class="tab-pane" id="tab-dati">
-                <h2 style="margin-bottom: 15px; color: #1a5f96;">💾 Dati</h2>
-
-                <h3 style="color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 6px; margin-bottom: 10px;">🏢 Anagrafica Fornitore</h3>
-                <div class="compact-form">
+                                        <div class="compact-form" id="anagrafica-azienda-form" style="grid-column: 1 / -1; min-width: 0; display:none; margin-top:15px; border: 1px solid #ddd; border-radius: 6px; padding: 15px;">
+                    <h3 style="margin-top: 0; margin-bottom: 15px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 10px;">Dati Azienda</h3>
                     <div class="form-group">
                         <label>Ragione Sociale</label>
                         <input type="text" id="az-nome-input" placeholder="Nome azienda">
@@ -690,40 +805,346 @@
                         </div>
                     </div>
                     <div class="actions">
-                        <button class="btn ochre" id="btn-salva-fornitore">Salva Anagrafica</button>
+                        <button class="btn secondary" id="btn-salva-azienda">Salva</button>
+                        <button class="btn secondary" id="btn-annulla-azienda">Annulla</button>
                     </div>
+                </div>
+
+                    <div id="logo-box" style="border: 1px solid #ddd; border-radius: 6px; padding: 15px; min-width: 0;">
+                        <h3 style="margin-top: 0; margin-bottom: 15px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 10px;">Logo</h3>
+                        <input type="file" id="logo-file" accept="image/jpeg,image/png" style="display:none">
+                        <div id="logo-top-row" style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:nowrap;">
+                            <button class="btn secondary" title="Importa logo (JPEG o PNG)" style="padding:8px 10px; font-size:12px; flex-shrink:0;" onclick="document.getElementById('logo-file').click()">Importa</button>
+                            <select id="logo-position" style="width:auto; max-width:95px; min-width:0; flex-shrink:1; padding:8px 4px; font-size:12px;">
+                                <option value="top">Alto</option>
+                                <option value="bottom">Basso</option>
+                                <option value="center">Centrale</option>
+                            </select>
+                            <button class="btn secondary" id="btn-toggle-logo-sliders" title="Regola dimensione e intensità" style="padding:8px 10px; font-size:12px; flex-shrink:0;">Modifica</button>
+                        </div>
+                        <div id="logo-preview"></div>
+                    </div>
+
+                                        <div id="logo-sliders" style="grid-column: 1 / -1; min-width: 0; display:none; margin-top:15px; border: 1px solid #ddd; border-radius: 6px; padding: 20px;">
+                    <h3 style="margin-top: 0; margin-bottom: 20px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 10px;">Logo: Dimensione e Intensità</h3>
+                    <div style="max-width: 560px;">
+                        <div>
+                            <label style="display:block; margin-bottom:10px; font-size:15px; font-weight:600; color:#333;">Dimensione</label>
+                            <input type="range" id="logo-size" min="0" max="100" step="10" value="50" list="logo-tacche">
+                            <div style="display:flex; justify-content:space-between; font-size:12px; color:#888; margin-top:2px;">
+                                <span>0</span><span>50</span><span>100</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 30px;" id="logo-watermark-opts">
+                            <label style="display:block; margin-bottom:10px; font-size:15px; font-weight:600; color:#333;">Intensità</label>
+                            <input type="range" id="logo-opacity" min="0" max="100" step="10" value="50" list="logo-tacche">
+                            <div style="display:flex; justify-content:space-between; font-size:12px; color:#888; margin-top:2px;">
+                                <span>0</span><span>50</span><span>100</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="actions" style="margin-top:22px;">
+                        <button class="btn secondary" id="btn-chiudi-logo-sliders">Chiudi</button>
+                    </div>
+                    <datalist id="logo-tacche">
+                        <option value="0"></option>
+                        <option value="10"></option>
+                        <option value="20"></option>
+                        <option value="30"></option>
+                        <option value="40"></option>
+                        <option value="50"></option>
+                        <option value="60"></option>
+                        <option value="70"></option>
+                        <option value="80"></option>
+                        <option value="90"></option>
+                        <option value="100"></option>
+                    </datalist>
+                </div>
+
+                    <div id="documento-box" style="border: 1px solid #ddd; border-radius: 6px; padding: 15px; min-width: 0;">
+                        <h3 style="margin-top: 0; margin-bottom: 15px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 10px;">Documento</h3>
+                        <div style="display:flex; gap:6px; flex-wrap:nowrap;">
+                            <div class="form-group" style="margin-bottom: 0; flex:1.3; min-width:0;">
+                                <label>Tipo</label>
+                                <select id="doc-tipo">
+                                    <option value="Preventivo">Preventivo</option>
+                                    <option value="Ordine">Ordine</option>
+                                    <option value="DDT">Documento di Trasporto (DDT)</option>
+                                    <option value="Proforma">Proforma</option>
+                                    <option value="Fattura">Fattura</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0; flex:0.8; min-width:0;">
+                                <label>Num.</label>
+                                <input type="number" id="doc-numero" placeholder="es. 001">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0; flex:1; min-width:0;">
+                                <label>Data</label>
+                                <input type="date" id="doc-data" style="text-align:center;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="cliente-box" style="border: 1px solid #ddd; border-radius: 6px; padding: 15px; min-width: 0;">
+                        <h3 style="margin-top: 0; margin-bottom: 15px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 10px;">Cliente</h3>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <input type="text" id="cl-nome" placeholder="Inserisci" list="clienti-datalist" autocomplete="off" style="flex:1; min-width:0;">
+                            <datalist id="clienti-datalist"></datalist>
+                            <button class="btn secondary" id="btn-crea-nuovo-cliente" style="flex-shrink:0;">Nuovo</button>
+                        </div>
+                    </div>
+                </div>
+                                <div id="cliente-dettagli" style="grid-column: 1 / -1; min-width: 0; display:none; margin-top:15px; border: 1px solid #ddd; border-radius: 6px; padding: 15px;">
+                    <h3 style="margin-top: 0; margin-bottom: 15px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 10px;">Dati Cliente</h3>
+                    <div class="anagrafica-grid">
+                        <div class="form-group">
+                            <label>Indirizzo PEC</label>
+                            <input type="text" id="cl-pec" placeholder="Indirizzo PEC">
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="cl-email" placeholder="Email">
+                        </div>
+                        <div class="form-group">
+                            <label>Codice SDI</label>
+                            <input type="text" id="cl-sdi" placeholder="Codice Destinatario (privati) o Codice Univoco (Pubblica Amministrazione)">
+                        </div>
+                        <div class="form-group">
+                            <label>Partita IVA</label>
+                            <input type="text" id="cl-piva" placeholder="Partita IVA">
+                        </div>
+                        <div class="form-group">
+                            <label>Codice Fiscale</label>
+                            <input type="text" id="cl-cf" placeholder="Codice Fiscale">
+                        </div>
+                        <div class="form-group">
+                            <label>Indirizzo</label>
+                            <input type="text" id="cl-indirizzo" placeholder="Via e numero civico">
+                        </div>
+                        <div class="form-group">
+                            <label>Comune</label>
+                            <input type="text" id="cl-comune" placeholder="Comune">
+                        </div>
+                        <div class="form-group">
+                            <label>CAP</label>
+                            <input type="text" id="cl-cap" placeholder="CAP">
+                        </div>
+                        <div class="form-group">
+                            <label>Prov.</label>
+                            <input type="text" id="cl-provincia" placeholder="Es. RM" maxlength="2" style="text-transform:uppercase;">
+                        </div>
+                        <div class="form-group">
+                            <label>Telefono</label>
+                            <input type="text" id="cl-tel" placeholder="Telefono">
+                        </div>
+                        <div class="form-group">
+                            <label>Cellulare</label>
+                            <input type="text" id="cl-cellulare" placeholder="Cellulare">
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn secondary" id="btn-salva-cliente">Salva</button>
+                        <button class="btn secondary" id="btn-annulla-cliente">Annulla</button>
+                    </div>
+                </div>
+
+                <input type="hidden" id="logo-tint" value="none">
+
+                <div id="ddt-dettagli" style="display:none; border: 1.5px solid #333; border-radius: 4px; padding: 10px; margin: 20px 0;">
+                    <p style="font-size: 11px; color: #888; margin: 0 0 10px;">Dati obbligatori per il Documento di Trasporto (DPR 472/1996)</p>
+                    <div class="form-group">
+                        <label>Causale del Trasporto</label>
+                        <input type="text" id="ddt-causale" placeholder="Es. Vendita" list="causali-datalist" autocomplete="off">
+                        <datalist id="causali-datalist">
+                            <option value="Vendita">
+                            <option value="Conto lavorazione">
+                            <option value="Reso">
+                            <option value="Omaggio">
+                            <option value="Visione/Prova">
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Aspetto Esteriore dei Beni</label>
+                        <input type="text" id="ddt-aspetto" placeholder="Es. N. 2 colli" list="aspetto-datalist" autocomplete="off">
+                        <datalist id="aspetto-datalist">
+                            <option value="Scatola/e">
+                            <option value="Collo/i">
+                            <option value="Pallet">
+                            <option value="Pacco/hi">
+                            <option value="Sfuso">
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Data e Ora Inizio Trasporto</label>
+                        <input type="datetime-local" id="ddt-data-ora">
+                    </div>
+                    <div class="form-group">
+                        <label>Vettore</label>
+                        <input type="text" id="ddt-vettore" placeholder="Es. Mittente, Destinatario, o ragione sociale del corriere">
+                    </div>
+                </div>
+
+                <div id="beni-servizi-box" style="border: 1px solid #ddd; border-radius: 6px; padding: 15px; margin-top: 20px;">
+                    <h3 style="margin-top: 0; margin-bottom: 10px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 10px;">Beni e Servizi</h3>
+                    <datalist id="prodotti-datalist"></datalist>
+
+                <div class="articoli-table-scroll">
+                <table id="righe-body">
+                    <colgroup id="righe-colgroup">
+                        <col id="col-brand" style="width: 10%;">
+                        <col id="col-linea" style="width: 10%;">
+                        <col id="col-bene" style="width: 14%;">
+                        <col id="col-qta" style="width: 10%;">
+                        <col id="col-prezzo" style="width: 13%;">
+                        <col id="col-sconto" style="width: 10%;">
+                        <col id="col-sconto2" style="width: 10%;">
+                        <col id="col-importo" style="width: 13%;">
+                        <col id="col-azioni" style="width: 10%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th class="col-brand" style="width: 10%; text-align:center;">
+                                Brand<br><input type="checkbox" id="chk-mostra-brand" style="width:auto; margin-top:2px;" title="Mostra/nascondi la colonna Brand in Anteprima e nel PDF">
+                            </th>
+                            <th class="col-linea" style="width: 10%; text-align:center;">
+                                Linea<br><input type="checkbox" id="chk-mostra-linea" style="width:auto; margin-top:2px;" title="Mostra/nascondi la colonna Linea in Anteprima e nel PDF">
+                            </th>
+                            <th style="width: 14%; text-align:center;">Bene o Servizio</th>
+                            <th style="width: 10%; text-align:center;">Q.tà<br><button class="btn secondary" id="btn-reset-qta-tutti" title="Ripristina Q.tà per tutti gli elementi" style="padding:1px 5px; font-size:9px; margin-top:2px;">↺</button></th>
+                            <th style="width: 13%; text-align:center;">Prezzo<br><button class="btn secondary" id="btn-reset-prezzo-tutti" title="Ripristina Prezzo per tutti gli elementi" style="padding:1px 5px; font-size:9px; margin-top:2px;">↺</button></th>
+                            <th class="col-sconto" style="width: 10%; text-align:center;">
+                                Sc.%<br>
+                                <div style="display:flex; align-items:center; justify-content:center; gap:3px; margin-top:2px;">
+                                    <input type="checkbox" id="chk-mostra-sconto" style="width:auto;" title="Mostra/nascondi la colonna Sconto in Anteprima e nel PDF">
+                                    <button class="btn secondary" id="btn-reset-sconto-tutti" title="Ripristina Sconto per tutti gli elementi" style="padding:1px 4px; font-size:9px;">↺</button>
+                                </div>
+                            </th>
+                            <th class="col-sconto2" style="width: 10%; text-align:center;">
+                                Sc.2%<br>
+                                <div style="display:flex; align-items:center; justify-content:center; gap:3px; margin-top:2px;">
+                                    <input type="checkbox" id="chk-mostra-sconto2" style="width:auto;" title="Mostra/nascondi la colonna Sconto 2 in Anteprima e nel PDF">
+                                    <button class="btn secondary" id="btn-reset-sconto2-tutti" title="Ripristina Sconto 2 per tutti gli elementi" style="padding:1px 4px; font-size:9px;">↺</button>
+                                </div>
+                            </th>
+                            <th style="width: 13%; text-align:center;">Importo</th>
+                            <th style="width: 10%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                </div>
+
+                <div class="actions articoli-actions-riga">
+                    <button class="btn secondary" id="btn-aggiungi-articolo">Aggiungi</button>
+                    <button class="btn secondary" id="btn-duplica-articolo">Duplica</button>
+                    <button class="btn secondary" id="btn-crea-nuovo-articolo">Nuovo</button>
+                    <input type="number" id="sconto-tutti-valore" placeholder="Sconto %" min="0" max="100" style="width:80px; padding:8px; flex-shrink:0;">
+                    <button class="btn secondary" id="btn-applica-sconto-tutti">Applica a tutto</button>
+                </div>
+
+                <div id="nuovo-prodotto-dettagli" style="display:none; margin-top:15px;">
+                    <p style="font-size: 11px; color: #888; margin-bottom: 10px;">Crea un nuovo bene o servizio non ancora presente in memoria: verrà salvato nel catalogo e aggiunto subito al documento.</p>
+                    <div class="row" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group">
+                            <label>Brand</label>
+                            <input type="text" id="np-brand" placeholder="Brand">
+                        </div>
+                        <div class="form-group">
+                            <label>Linea</label>
+                            <input type="text" id="np-linea" placeholder="Linea">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Descrizione</label>
+                        <input type="text" id="np-desc" placeholder="Descrizione Bene o Servizio">
+                    </div>
+                    <div class="row" style="grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                        <div class="form-group">
+                            <label>Q.tà</label>
+                            <input type="number" id="np-qta" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Prezzo</label>
+                            <input type="number" id="np-prezzo" value="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Sc.%</label>
+                            <input type="number" id="np-sconto" value="0" min="0" max="100">
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn secondary" id="btn-salva-nuovo-prodotto">Salva</button>
+                        <button class="btn secondary" id="btn-annulla-nuovo-prodotto">Annulla</button>
+                    </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border-radius: 6px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 13px;">
+                        <div><strong>Totale Sconti:</strong> <span id="tot-sconti" style="color: #1a5f96; font-weight: 700;">0,00 €</span></div>
+                        <div style="text-align: right;"><strong>Imponibile:</strong> <span id="tot-imponibile" style="color: #1a5f96; font-weight: 700;">0,00 €</span></div>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <textarea id="doc-note" placeholder="Note a piè di pagina"></textarea>
+                </div>
+                
+                <div class="actions">
+                    <button class="btn ochre" id="btn-pdf">PDF</button>
+                    <button class="btn ochre" id="btn-condividi-pdf">Condividi</button>
+                </div>
+            </div>
+            
+            <!-- TAB: ANTEPRIMA -->            <!-- TAB: ANTEPRIMA -->
+            <div class="tab-pane" id="tab-anteprima">
+                <h2 style="margin-bottom: 20px; color: #1a5f96;">👁️ Anteprima Documento</h2>
+                <div id="preview-container"></div>
+            </div>
+
+            <!-- TAB: DATI -->
+            <div class="tab-pane" id="tab-dati">
+                <h2 style="margin-bottom: 15px; color: #1a5f96;">💾 Dati</h2>
+
+                <h3 style="color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 6px; margin-bottom: 10px;">🏢 Anagrafica Azienda</h3>
+                <p style="font-size: 11px; color: #888; margin: 0 0 10px;">I dati dell'azienda si inseriscono e modificano dalla tab Documento. Qui puoi importare, esportare o cancellare l'anagrafica.</p>
+                <input type="file" id="import-azienda-json" accept=".json" style="display:none">
+                <div class="actions dati-actions">
+                    <button class="btn secondary" onclick="document.getElementById('import-azienda-json').click()">Importa</button>
+                    <button class="btn secondary" id="btn-export-azienda">Esporta</button>
+                    <button class="btn secondary" id="btn-svuota-azienda">Cancella</button>
                 </div>
 
                 <h3 style="margin-top: 30px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 6px;">👥 Clienti</h3>
                 <input type="file" id="import-clienti-csv" accept=".csv,.txt,.xlsx" style="display:none">
-                <div class="actions">
-                    <button class="btn secondary" onclick="document.getElementById('import-clienti-csv').click()">Importa Clienti (CSV/XLSX)</button>
-                    <button class="btn secondary" id="btn-export-clienti-xlsx">Esporta Clienti (XLSX)</button>
-                    <button class="btn secondary" id="btn-svuota-clienti">Cancella Clienti</button>
+                <div class="actions dati-actions">
+                    <button class="btn secondary" onclick="document.getElementById('import-clienti-csv').click()">Importa</button>
+                    <button class="btn secondary" id="btn-export-clienti-xlsx">Esporta</button>
+                    <button class="btn secondary" id="btn-svuota-clienti">Cancella</button>
                 </div>
-                <div id="lista-clienti" style="margin-top:10px; max-height:260px; overflow-y:auto;"></div>
+                <div id="lista-clienti" style="margin-top:10px; max-height:165px; overflow-y:auto;"></div>
 
                 <h3 style="margin-top: 30px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 6px;">📦 Beni e Servizi</h3>
                 <input type="file" id="import-prodotti-csv" accept=".csv,.txt,.xlsx" style="display:none">
-                <div class="actions">
-                    <button class="btn secondary" onclick="document.getElementById('import-prodotti-csv').click()">Importa Beni e Servizi (CSV/XLSX)</button>
-                    <button class="btn secondary" id="btn-export-prodotti-xlsx">Esporta Beni e Servizi (XLSX)</button>
-                    <button class="btn secondary" id="btn-svuota-prodotti">Cancella Beni e Servizi</button>
+                <div class="actions dati-actions">
+                    <button class="btn secondary" onclick="document.getElementById('import-prodotti-csv').click()">Importa</button>
+                    <button class="btn secondary" id="btn-export-prodotti-xlsx">Esporta</button>
+                    <button class="btn secondary" id="btn-svuota-prodotti">Cancella</button>
                 </div>
-                <div id="lista-prodotti" style="margin-top:10px; max-height:260px; overflow-y:auto;"></div>
+                <div id="lista-prodotti" style="margin-top:10px; max-height:165px; overflow-y:auto;"></div>
 
                 <h3 style="margin-top: 30px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 6px;">📁 Archivio Documenti</h3>
-                <p style="font-size: 12px; color: #888; margin-bottom: 12px;">Ogni volta che generi un PDF, il documento viene salvato qui. Puoi riaprirlo così com'era, oppure usarlo come base per uno nuovo (stesso cliente ed elementi, numero e data aggiornati).</p>
                 <div class="form-group">
-                    <input type="text" id="archivio-ricerca" placeholder="Cerca per nome cliente...">
+                    <input type="text" id="archivio-ricerca" placeholder="Cerca per cliente, numero o prodotto...">
                 </div>
                 <div id="lista-archivio"></div>
 
                 <h3 style="margin-top: 30px; color: #1a5f96; border-bottom: 2px solid #d4a574; padding-bottom: 6px;">Backup completo</h3>
                 <input type="file" id="import-file" accept=".json" style="display:none">
-                <div class="actions">
-                    <button class="btn secondary" onclick="document.getElementById('import-file').click()">Importa Backup (JSON)</button>
-                    <button class="btn secondary" id="btn-export">Esporta Backup (JSON)</button>
+                <div class="actions dati-actions">
+                    <button class="btn secondary" onclick="document.getElementById('import-file').click()">Importa</button>
+                    <button class="btn secondary" id="btn-export">Esporta</button>
+                    <button class="btn secondary" id="btn-svuota-tutto">Cancella</button>
                 </div>
             </div>
         </div>
@@ -732,18 +1153,25 @@
     <script>
         // ===== DATI AZIENDA =====
         const AZIENDA_DEFAULT = {
-            'az-nome': 'ML DISTRIBUZIONE S.R.L.S.',
-            'az-indirizzo': 'Via Brenta 5',
-            'az-comune': 'San Cesareo',
-            'az-cap': '00040',
-            'az-provincia': 'RM',
+            'az-nome': '',
+            'az-indirizzo': '',
+            'az-comune': '',
+            'az-cap': '',
+            'az-provincia': '',
             'az-tel': '',
             'az-email': '',
             'az-pec': '',
             'az-sdi': '',
-            'az-piva': '13102921007',
+            'az-piva': '',
             'az-cf': ''
         };
+        // Pulizia una tantum: prima di questa versione l'app arrivava con la ragione sociale
+        // già scritta "di fabbrica" nel browser. Qui la togliamo una sola volta, cosicché
+        // chi la sta già usando riparta pulito, senza cancellare dati inseriti in seguito.
+        if (!localStorage.getItem('aziendaPuliziaV2')) {
+            localStorage.removeItem('azienda');
+            localStorage.setItem('aziendaPuliziaV2', '1');
+        }
         const azienda = Object.assign({}, AZIENDA_DEFAULT, JSON.parse(localStorage.getItem('azienda') || '{}'));
         // Compatibilità con dati salvati nel vecchio formato (campo unico "Città e CAP" az-localita)
         if (azienda['az-comune'] === undefined && azienda['az-localita']) {
@@ -753,19 +1181,99 @@
         }
 
         // ===== ANAGRAFICA FORNITORE: popolamento form e salvataggio =====
-        document.getElementById('az-nome-input').value = azienda['az-nome'] || '';
-        document.getElementById('az-pec-input').value = azienda['az-pec'] || '';
-        document.getElementById('az-email-input').value = azienda['az-email'] || '';
-        document.getElementById('az-tel-input').value = azienda['az-tel'] || '';
-        document.getElementById('az-sdi-input').value = azienda['az-sdi'] || '';
-        document.getElementById('az-piva-input').value = azienda['az-piva'] || '';
-        document.getElementById('az-cf-input').value = azienda['az-cf'] || '';
-        document.getElementById('az-indirizzo-input').value = azienda['az-indirizzo'] || '';
-        document.getElementById('az-comune-input').value = azienda['az-comune'] || '';
-        document.getElementById('az-cap-input').value = azienda['az-cap'] || '';
-        document.getElementById('az-provincia-input').value = azienda['az-provincia'] || '';
+        function popolaFormAzienda() {
+            document.getElementById('az-nome-input').value = azienda['az-nome'] || '';
+            document.getElementById('az-pec-input').value = azienda['az-pec'] || '';
+            document.getElementById('az-email-input').value = azienda['az-email'] || '';
+            document.getElementById('az-tel-input').value = azienda['az-tel'] || '';
+            document.getElementById('az-sdi-input').value = azienda['az-sdi'] || '';
+            document.getElementById('az-piva-input').value = azienda['az-piva'] || '';
+            document.getElementById('az-cf-input').value = azienda['az-cf'] || '';
+            document.getElementById('az-indirizzo-input').value = azienda['az-indirizzo'] || '';
+            document.getElementById('az-comune-input').value = azienda['az-comune'] || '';
+            document.getElementById('az-cap-input').value = azienda['az-cap'] || '';
+            document.getElementById('az-provincia-input').value = azienda['az-provincia'] || '';
+        }
+        popolaFormAzienda();
 
-        document.getElementById('btn-salva-fornitore').addEventListener('click', () => {
+        // Anteprima nel riquadro "Azienda" (tab Documento): mostra solo la ragione sociale (i
+        // dettagli si vedono aprendo "Modifica"), oppure un avviso che l'azienda non è ancora
+        // stata configurata. "Modifica" compare solo se l'azienda è già stata impostata.
+        function aggiornaBottoniAzienda() {
+            const btnModifica = document.getElementById('btn-modifica-azienda');
+            if (btnModifica) btnModifica.style.display = azienda['az-nome'] ? '' : 'none';
+        }
+        function renderAziendaPreview() {
+            const cont = document.getElementById('azienda-preview');
+            aggiornaBottoniAzienda();
+            if (!cont) return;
+            if (!azienda['az-nome']) {
+                cont.innerHTML = '<p style="color:#888; margin:0;">Nessuna azienda impostata.</p>';
+                return;
+            }
+            cont.innerHTML = `<p style="margin:0; font-weight:700; color:#1a5f96;">${escapeHtml(azienda['az-nome'])}</p>`;
+        }
+        renderAziendaPreview();
+
+        // Sezione a scomparsa: "Modifica" apre il modulo già precompilato con i dati esistenti,
+        // "Nuovo" lo apre vuoto (pronto per un'azienda diversa, che sovrascriverà al Salva),
+        // "Annulla" lo richiude senza salvare nulla.
+        function chiudiPannelloAzienda() {
+            document.getElementById('anagrafica-azienda-form').style.display = 'none';
+            document.getElementById('azienda-actions').style.display = '';
+            popolaFormAzienda();
+            renderAziendaPreview();
+        }
+        document.getElementById('btn-modifica-azienda').addEventListener('click', () => {
+            popolaFormAzienda();
+            document.getElementById('anagrafica-azienda-form').style.display = 'block';
+            document.getElementById('azienda-actions').style.display = 'none';
+        });
+        document.getElementById('btn-nuovo-azienda').addEventListener('click', () => {
+            ['az-nome-input', 'az-pec-input', 'az-email-input', 'az-tel-input', 'az-sdi-input', 'az-piva-input',
+             'az-cf-input', 'az-indirizzo-input', 'az-comune-input', 'az-cap-input', 'az-provincia-input'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('anagrafica-azienda-form').style.display = 'block';
+            document.getElementById('azienda-actions').style.display = 'none';
+        });
+        document.getElementById('btn-annulla-azienda').addEventListener('click', chiudiPannelloAzienda);
+
+        document.getElementById('btn-export-azienda').addEventListener('click', () => {
+            const jsonBytes = new TextEncoder().encode(JSON.stringify(azienda, null, 2));
+            salvaBytes('AllDocs_Azienda.json', jsonBytes, 'application/json');
+            toast('Anagrafica azienda scaricata');
+        });
+
+        document.getElementById('import-azienda-json').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const data = JSON.parse(evt.target.result);
+                    Object.assign(azienda, data);
+                    localStorage.setItem('azienda', JSON.stringify(azienda));
+                    popolaFormAzienda();
+                    renderAziendaPreview();
+                    toast('Anagrafica azienda importata');
+                } catch (err) {
+                    toast('File non valido');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        document.getElementById('btn-svuota-azienda').addEventListener('click', () => {
+            Object.keys(azienda).forEach(k => { azienda[k] = ''; });
+            localStorage.setItem('azienda', JSON.stringify(azienda));
+            popolaFormAzienda();
+            renderAziendaPreview();
+            toast('Anagrafica azienda cancellata');
+        });
+
+        document.getElementById('btn-salva-azienda').addEventListener('click', () => {
             azienda['az-nome'] = document.getElementById('az-nome-input').value;
             azienda['az-pec'] = document.getElementById('az-pec-input').value;
             azienda['az-sdi'] = document.getElementById('az-sdi-input').value;
@@ -779,7 +1287,10 @@
             azienda['az-piva'] = document.getElementById('az-piva-input').value;
             azienda['az-cf'] = document.getElementById('az-cf-input').value;
             localStorage.setItem('azienda', JSON.stringify(azienda));
-            toast('Anagrafica fornitore salvata');
+            document.getElementById('anagrafica-azienda-form').style.display = 'none';
+            document.getElementById('azienda-actions').style.display = '';
+            renderAziendaPreview();
+            toast('Anagrafica azienda salvata');
         });
 
         // ===== UI TABS =====
@@ -872,13 +1383,27 @@
             reader.readAsDataURL(file);
         });
 
+        // La barra "Dimensione" va da 10 a 100 (a scatti di 10): qui la convertiamo nella larghezza
+        // reale in pixel usata per disegnare il logo (10 → ~45px, 100 → 450px).
+        function logoSizePx(valoreSlider) {
+            return Math.round((parseInt(valoreSlider, 10) || 0) * 4.5);
+        }
         document.getElementById('logo-position').addEventListener('change', (e) => {
             const pos = e.target.value;
             const sizeInput = document.getElementById('logo-size');
             const opacityInput = document.getElementById('logo-opacity');
-            if (pos === 'center') { sizeInput.value = 380; opacityInput.value = 15; }
-            else if (pos === 'bottom') { sizeInput.value = 90; opacityInput.value = 100; }
-            else { sizeInput.value = 110; opacityInput.value = 100; }
+            if (pos === 'center') { sizeInput.value = 80; opacityInput.value = 10; }
+            else if (pos === 'bottom') { sizeInput.value = 20; opacityInput.value = 100; }
+            else { sizeInput.value = 20; opacityInput.value = 100; }
+        });
+
+        // "Modifica" apre a tendina, a piena larghezza, i due cursori Dimensione/Intensità (tenuti
+        // nascosti di default per lasciare il riquadro Logo più compatto); "Chiudi" li richiude.
+        document.getElementById('btn-toggle-logo-sliders').addEventListener('click', () => {
+            document.getElementById('logo-sliders').style.display = 'block';
+        });
+        document.getElementById('btn-chiudi-logo-sliders').addEventListener('click', () => {
+            document.getElementById('logo-sliders').style.display = 'none';
         });
 
         // ===== TENDINA DI SUGGERIMENTI PERSONALIZZATA (non usa <datalist>, funziona su ogni browser/dispositivo) =====
@@ -934,6 +1459,61 @@
         // ===== RIGHE ARTICOLI =====
         const righeBody = document.querySelector('#righe-body tbody');
 
+        // Pulizia una tantum: su alcuni dispositivi erano rimaste salvate delle colonne disattivate
+        // da prove precedenti (es. Linea o Sconto spente), mentre di norma dovrebbero partire tutte
+        // attive. Qui le reimpostiamo un'unica volta, così ripartono tutte selezionate ovunque.
+        if (!localStorage.getItem('colonneArticoliPuliziaV1')) {
+            localStorage.removeItem('mostraBrand');
+            localStorage.removeItem('mostraLinea');
+            localStorage.removeItem('mostraSconto');
+            localStorage.removeItem('mostraSconto2');
+            localStorage.setItem('colonneArticoliPuliziaV1', '1');
+        }
+
+        // Brand e Linea sono colonne vere e proprie della tabella (prima Brand, poi Linea, poi il
+        // resto), con una casella nella loro stessa intestazione per mostrarle o nasconderle — sia
+        // nell'inserimento riga sia in Anteprima e nel PDF. Stato persistente per dispositivo/browser.
+        function mostraBrandAttivo() { return localStorage.getItem('mostraBrand') !== '0'; }
+        function mostraLineaAttivo() { return localStorage.getItem('mostraLinea') !== '0'; }
+        // Sconto e Sconto 2 seguono lo stesso schema di Brand/Linea: casella nell'intestazione,
+        // attiva di default, stato persistente per dispositivo/browser.
+        function mostraScontoAttivo() { return localStorage.getItem('mostraSconto') !== '0'; }
+        function mostraSconto2Attivo() { return localStorage.getItem('mostraSconto2') !== '0'; }
+        // Le caselle Brand/Linea/Sconto/Sconto2 NON nascondono più le colonne nella tabella di
+        // inserimento (tab Documento): lì restano sempre tutte visibili, per non perdere spazio
+        // né la possibilità di riattivarle. Decidono solo se la colonna compare in Anteprima e nel PDF.
+        function applicaVisibilitaBrandLinea() {
+            const mostraBrand = mostraBrandAttivo();
+            const mostraLinea = mostraLineaAttivo();
+            const mostraSconto = mostraScontoAttivo();
+            const mostraSconto2 = mostraSconto2Attivo();
+            document.getElementById('chk-mostra-brand').checked = mostraBrand;
+            document.getElementById('chk-mostra-linea').checked = mostraLinea;
+            document.getElementById('chk-mostra-sconto').checked = mostraSconto;
+            document.getElementById('chk-mostra-sconto2').checked = mostraSconto2;
+        }
+        applicaVisibilitaBrandLinea();
+        document.getElementById('chk-mostra-brand').addEventListener('change', (e) => {
+            localStorage.setItem('mostraBrand', e.target.checked ? '1' : '0');
+            applicaVisibilitaBrandLinea();
+            renderAnteprima();
+        });
+        document.getElementById('chk-mostra-linea').addEventListener('change', (e) => {
+            localStorage.setItem('mostraLinea', e.target.checked ? '1' : '0');
+            applicaVisibilitaBrandLinea();
+            renderAnteprima();
+        });
+        document.getElementById('chk-mostra-sconto').addEventListener('change', (e) => {
+            localStorage.setItem('mostraSconto', e.target.checked ? '1' : '0');
+            applicaVisibilitaBrandLinea();
+            renderAnteprima();
+        });
+        document.getElementById('chk-mostra-sconto2').addEventListener('change', (e) => {
+            localStorage.setItem('mostraSconto2', e.target.checked ? '1' : '0');
+            applicaVisibilitaBrandLinea();
+            renderAnteprima();
+        });
+
         // Seleziona tutto il contenuto del campo quando riceve il focus, così scrivendo si
         // sostituisce subito il valore invece di dover cancellare a mano. Usato SOLO sui campi
         // numerici della riga articolo (Q.tà, Prezzo, Sc.%) — mai sui campi testuali (nomi,
@@ -949,11 +1529,9 @@
         function creaRigaVuota() {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>
-                    <input type="text" class="r-brand campo-extra" placeholder="Brand" style="width:100%; border:none; text-align:center;">
-                    <input type="text" class="r-linea campo-extra" placeholder="Linea" style="width:100%; border:none; text-align:center;">
-                    <input type="text" class="r-desc" placeholder="Inserisci..." list="prodotti-datalist" autocomplete="off" style="width:100%; border:none; text-align:center;">
-                </td>
+                <td class="col-brand"><input type="text" class="r-brand" placeholder="Brand" style="width:100%; border:none; text-align:center;"></td>
+                <td class="col-linea"><input type="text" class="r-linea" placeholder="Linea" style="width:100%; border:none; text-align:center;"></td>
+                <td><input type="text" class="r-desc" placeholder="Inserisci" list="prodotti-datalist" autocomplete="off" style="width:100%; border:none; text-align:center;"></td>
                 <td>
                     <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
                         <button type="button" class="btn secondary r-qta-meno" style="padding:1px 5px; font-size:12px; line-height:1.4; min-width:20px;">−</button>
@@ -962,14 +1540,16 @@
                     </div>
                 </td>
                 <td><input type="number" class="r-prezzo" value="0" step="0.01" style="width:100%; border:none; text-align:center;"></td>
-                <td><input type="number" class="r-sconto" value="0" min="0" max="100" style="width:100%; border:none; text-align:center;"></td>
+                <td class="col-sconto"><input type="number" class="r-sconto" value="0" min="0" max="100" style="width:100%; border:none; text-align:center;"></td>
+                <td class="col-sconto2"><input type="number" class="r-sconto2" value="0" min="0" max="100" style="width:100%; border:none; text-align:center;"></td>
                 <td><input type="number" class="r-importo" value="0" step="0.01" style="width:100%; border:none; text-align:center; font-weight:600;"></td>
                 <td style="text-align:center; white-space:nowrap;"></td>
             `;
 
-            // Q.tà, Prezzo e Sconto ricalcolano sempre l'Importo in automatico, e "sbloccano"
-            // l'eventuale Importo scritto a mano in precedenza (si torna al calcolo automatico).
-            ['r-qta', 'r-prezzo', 'r-sconto'].forEach(cls => {
+            // Q.tà, Prezzo e i due Sconti ricalcolano sempre l'Importo in automatico (a cascata:
+            // prima si applica lo Sconto, poi lo Sconto 2 sul risultato), e "sbloccano" l'eventuale
+            // Importo scritto a mano in precedenza (si torna al calcolo automatico).
+            ['r-qta', 'r-prezzo', 'r-sconto', 'r-sconto2'].forEach(cls => {
                 tr.querySelector('.' + cls).addEventListener('input', () => {
                     delete tr.dataset.importoManuale;
                     recalcola();
@@ -1006,9 +1586,9 @@
             btnReset.className = 'btn secondary';
             btnReset.style = 'padding:2px 6px; font-size:11px;';
             btnReset.textContent = '↺';
-            btnReset.title = 'Ripristina Q.tà, Prezzo e Sconto di questo articolo';
+            btnReset.title = 'Ripristina Q.tà, Prezzo e Sconti di questo articolo';
             btnReset.addEventListener('click', () => resetRiga(tr));
-            tr.children[5].appendChild(btnReset);
+            tr.children[8].appendChild(btnReset);
 
             return tr;
         }
@@ -1030,6 +1610,7 @@
             tr.querySelector('.r-qta').value = sorgente.querySelector('.r-qta').value;
             tr.querySelector('.r-prezzo').value = sorgente.querySelector('.r-prezzo').value;
             tr.querySelector('.r-sconto').value = sorgente.querySelector('.r-sconto').value;
+            tr.querySelector('.r-sconto2').value = sorgente.querySelector('.r-sconto2').value;
             if (sorgente.dataset.importoManuale === '1') {
                 tr.dataset.importoManuale = '1';
                 tr.querySelector('.r-importo').value = sorgente.querySelector('.r-importo').value;
@@ -1050,7 +1631,8 @@
             }
         });
 
-        // Ripristina Q.tà (a 1), Prezzo e Sconto (dal catalogo, se il nome corrisponde) di UNA riga
+        // Ripristina Q.tà (a 1), Prezzo e Sconto (dal catalogo, se il nome corrisponde) di UNA riga;
+        // lo Sconto 2 non ha una controparte in catalogo, quindi torna semplicemente a 0.
         function resetRiga(tr) {
             const desc = (tr.querySelector('.r-desc').value || '').toLowerCase();
             const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
@@ -1060,6 +1642,7 @@
                 tr.querySelector('.r-prezzo').value = match.prezzo;
                 tr.querySelector('.r-sconto').value = match.sconto;
             }
+            tr.querySelector('.r-sconto2').value = 0;
             delete tr.dataset.importoManuale;
             recalcola();
         }
@@ -1099,6 +1682,15 @@
             recalcola();
             toast('Sconto ripristinato dal catalogo per tutti gli elementi');
         });
+        // Lo Sconto 2 non ha una controparte in catalogo: il ripristino di massa lo azzera soltanto.
+        document.getElementById('btn-reset-sconto2-tutti').addEventListener('click', () => {
+            righeBody.querySelectorAll('tr').forEach(tr => {
+                tr.querySelector('.r-sconto2').value = 0;
+                delete tr.dataset.importoManuale;
+            });
+            recalcola();
+            toast('Sconto 2 azzerato per tutti gli elementi');
+        });
         document.getElementById('btn-reset-prezzo-tutti').addEventListener('click', () => {
             const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
             righeBody.querySelectorAll('tr').forEach(tr => {
@@ -1117,15 +1709,18 @@
                 const qta = parseFloat(tr.querySelector('.r-qta').value || 0);
                 const prezzo = parseFloat(tr.querySelector('.r-prezzo').value || 0);
                 const sconto = parseFloat(tr.querySelector('.r-sconto').value || 0);
+                const sconto2 = parseFloat(tr.querySelector('.r-sconto2').value || 0);
                 const importoInput = tr.querySelector('.r-importo');
                 const lotto = qta * prezzo;
                 let importo;
                 if (tr.dataset.importoManuale === '1') {
                     // Importo scritto a mano per questa riga: lo rispettiamo così com'è, non lo
-                    // ricalcoliamo da Q.tà/Prezzo/Sconto finché quei campi non vengono ritoccati.
+                    // ricalcoliamo da Q.tà/Prezzo/Sconti finché quei campi non vengono ritoccati.
                     importo = parseFloat(importoInput.value || 0);
                 } else {
-                    importo = lotto - (lotto * sconto / 100);
+                    // Sconto a cascata: il secondo sconto si applica sul risultato del primo.
+                    const dopoSconto1 = lotto - (lotto * sconto / 100);
+                    importo = dopoSconto1 - (dopoSconto1 * sconto2 / 100);
                     importoInput.value = importo.toFixed(2);
                 }
                 totSconti += (lotto - importo);
@@ -1206,9 +1801,25 @@
         aggiornaVisibilitaDdt();
 
         // ===== ANTEPRIMA DOCUMENTO =====
+        // Finché non è stato inserito né un cliente né un elemento, il documento è ancora
+        // "vuoto": in quel caso l'intestazione mostra la parola generica "Documento" invece
+        // di presumere già un tipo specifico (es. "Preventivo"). Non tocca in nessun modo
+        // il tipo realmente selezionato, la numerazione o il PDF: è solo il testo mostrato.
+        function documentoEVuoto() {
+            const clienteNomeVal = (document.getElementById('cl-nome').value || '').trim();
+            if (clienteNomeVal) return false;
+            const righe = righeBody.querySelectorAll('tr');
+            for (const tr of righe) {
+                const desc = tr.querySelector('.r-desc');
+                if (desc && desc.value.trim()) return false;
+            }
+            return true;
+        }
+
         function renderAnteprima() {
             const container = document.getElementById('preview-container');
             const tipo = document.getElementById('doc-tipo').value;
+            const tipoLabel = documentoEVuoto() ? 'Documento' : (tipo === 'DDT' ? 'Documento di Trasporto' : tipo);
             const numero = document.getElementById('doc-numero').value || '-';
             const numeroConAnno = numero + '/' + annoDocumentoCorrente();
             const data = document.getElementById('doc-data').value ? new Date(document.getElementById('doc-data').value).toLocaleDateString('it-IT') : '';
@@ -1224,7 +1835,7 @@
             const logoPos = document.getElementById('logo-position').value;
             const logoOpacity = parseInt(document.getElementById('logo-opacity').value, 10) / 100;
             const logoTint = document.getElementById('logo-tint').value;
-            const logoSize = parseInt(document.getElementById('logo-size').value, 10);
+            const logoSize = logoSizePx(document.getElementById('logo-size').value);
             const note = document.getElementById('doc-note').value;
             
             let html = '';
@@ -1239,17 +1850,30 @@
                 <div class="preview-header" style="position:relative;">
                     ${(logoPos === 'top' && logoData) ? `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:-1; opacity:${logoOpacity}; ${logoTint !== 'none' ? 'filter: grayscale(1) brightness(1.1);' : ''} pointer-events:none;"><img src="${logoData}" style="width:${logoSize}px; max-width:70vw;"></div>` : ''}
                     <div class="preview-company">
-                        <h3>${azienda['az-nome']}</h3>
-                        <p>${azienda['az-indirizzo']}<br>${formattaIndirizzoLocalita(azienda['az-comune'], azienda['az-cap'], azienda['az-provincia'])}<br>Tel: ${azienda['az-tel']}<br>P.IVA: ${azienda['az-piva']}${azienda['az-cf'] ? '<br>C.F.: ' + azienda['az-cf'] : ''}</p>
+                        <h3>Azienda</h3>
+                        <p>${[
+                            azienda['az-nome'] ? `<span class="nome-bilanciato">${azienda['az-nome']}</span>` : '',
+                            azienda['az-indirizzo'],
+                            formattaIndirizzoLocalita(azienda['az-comune'], azienda['az-cap'], azienda['az-provincia']),
+                            azienda['az-tel'] ? 'Tel: ' + azienda['az-tel'] : '',
+                            azienda['az-piva'] ? 'P.IVA: ' + azienda['az-piva'] : '',
+                            azienda['az-cf'] ? 'C.F.: ' + azienda['az-cf'] : ''
+                        ].filter(Boolean).join('<br>')}</p>
                     </div>
                     <div class="preview-client">
                         <h3>Cliente</h3>
-                        <p><span class="nome-bilanciato">${clienteNome}</span><br>${clienteIndirizzo}<br>${clienteLocalita}<br>P.IVA: ${clientePiva}${clienteCf ? '<br>C.F.: ' + clienteCf : ''}</p>
+                        <p>${[
+                            clienteNome ? `<span class="nome-bilanciato">${clienteNome}</span>` : '',
+                            clienteIndirizzo,
+                            clienteLocalita,
+                            clientePiva ? 'P.IVA: ' + clientePiva : '',
+                            clienteCf ? 'C.F.: ' + clienteCf : ''
+                        ].filter(Boolean).join('<br>')}</p>
                     </div>
                 </div>
-                
+
                 <div class="preview-info">
-                    <div><strong>${tipo === 'DDT' ? 'Documento di Trasporto' : tipo}</strong> N° ${numeroConAnno}</div>
+                    <div><strong>${tipoLabel}</strong> N° ${numeroConAnno}</div>
                     <div style="text-align:right;"><strong>Data: ${data}</strong></div>
                 </div>
                 ${tipo === 'DDT' ? `
@@ -1259,31 +1883,42 @@
                     <p style="margin:2px 0;"><strong>Data/Ora Inizio Trasporto:</strong> ${formattaDataOraDdt(document.getElementById('ddt-data-ora').value)}</p>
                     <p style="margin:2px 0;"><strong>Vettore:</strong> ${document.getElementById('ddt-vettore').value}</p>
                 </div>` : ''}
+            `;
 
+            const colonneArticoli = [
+                { key: 'brand', label: 'Brand', weight: 11, attiva: mostraBrandAttivo() },
+                { key: 'linea', label: 'Linea', weight: 11, attiva: mostraLineaAttivo() },
+                { key: 'desc', label: 'Bene o Servizio', weight: 24, attiva: true },
+                { key: 'qta', label: 'Q.tà', weight: 9, attiva: true },
+                { key: 'prezzo', label: 'Prezzo', weight: 12, attiva: true },
+                { key: 'sconto', label: 'Sc.%', weight: 9, attiva: mostraScontoAttivo() },
+                { key: 'sconto2', label: 'Sc.2%', weight: 9, attiva: mostraSconto2Attivo() },
+                { key: 'importo', label: 'Importo', weight: 13, attiva: true }
+            ].filter(c => c.attiva);
+            const pesoTotaleArticoli = colonneArticoli.reduce((s, c) => s + c.weight, 0);
+
+            html += `
                 <table class="preview-table">
                     <thead>
                         <tr>
-                            <th style="width:13%;">Brand</th>
-                            <th style="width:13%;">Linea</th>
-                            <th style="width:27%;">Descrizione Bene<br>o Servizio</th>
-                            <th style="width:10%;">Q.tà</th>
-                            <th style="width:13%;">Prezzo</th>
-                            <th style="width:10%;">Sc.%</th>
-                            <th style="width:14%;">Importo</th>
+                            ${colonneArticoli.map(c => `<th style="width:${(c.weight / pesoTotaleArticoli * 100).toFixed(1)}%;">${c.label}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
             `;
-            
+
             righeBody.querySelectorAll('tr').forEach(tr => {
-                const brand = tr.querySelector('.r-brand').value;
-                const linea = tr.querySelector('.r-linea').value;
-                const desc = tr.querySelector('.r-desc').value;
-                const qta = tr.querySelector('.r-qta').value;
-                const prezzo = tr.querySelector('.r-prezzo').value;
-                const sconto = tr.querySelector('.r-sconto').value;
-                const importo = parseFloat(tr.querySelector('.r-importo').value || 0).toFixed(2) + ' €';
-                html += `<tr><td>${brand}</td><td>${linea}</td><td>${desc}</td><td>${qta}</td><td>${prezzo}</td><td>${sconto}</td><td style="font-weight:600;">${importo}</td></tr>`;
+                const valoriRiga = {
+                    brand: tr.querySelector('.r-brand').value,
+                    linea: tr.querySelector('.r-linea').value,
+                    desc: tr.querySelector('.r-desc').value,
+                    qta: tr.querySelector('.r-qta').value,
+                    prezzo: tr.querySelector('.r-prezzo').value,
+                    sconto: tr.querySelector('.r-sconto').value,
+                    sconto2: tr.querySelector('.r-sconto2').value,
+                    importo: parseFloat(tr.querySelector('.r-importo').value || 0).toFixed(2) + ' €'
+                };
+                html += '<tr>' + colonneArticoli.map(c => `<td${c.key === 'importo' ? ' style="font-weight:600;"' : ''}>${valoriRiga[c.key]}</td>`).join('') + '</tr>';
             });
             
             html += `
@@ -1295,19 +1930,26 @@
                     <p class="total">Imponibile: ${document.getElementById('tot-imponibile').textContent}</p>
                 </div>
                 
-                <textarea class="preview-notes" id="preview-notes-input"></textarea>
+                <div class="preview-notes-row">
+                    <textarea class="preview-notes" id="preview-notes-input" placeholder="Note a piè di pagina"></textarea>
+                    <button type="button" class="btn secondary preview-notes-save" id="btn-salva-nota-default">Salva</button>
+                </div>
             `;
-            
+
             if (logoPos === 'bottom' && logoData) {
                 html += `<div class="preview-logo-bottom"><img src="${logoData}" style="width:${logoSize}px; max-width:100%; height:auto; opacity:${logoOpacity}; ${logoTint !== 'none' ? 'filter: grayscale(1) brightness(1.1);' : ''}"></div>`;
             }
-            
+
             container.innerHTML = html;
 
             const notesInput = document.getElementById('preview-notes-input');
             notesInput.value = note;
             notesInput.addEventListener('input', () => {
                 document.getElementById('doc-note').value = notesInput.value;
+            });
+            document.getElementById('btn-salva-nota-default').addEventListener('click', () => {
+                localStorage.setItem('notaDefault', notesInput.value);
+                toast('Nota predefinita salvata');
             });
         }
 
@@ -1400,6 +2042,7 @@
         // e poi incorporato come singola immagine nel PDF finale.
         async function buildPdfBytes() {
             const tipo = document.getElementById('doc-tipo').value;
+            const tipoLabelPdf = documentoEVuoto() ? 'Documento' : (tipo === 'DDT' ? 'Documento di Trasporto' : tipo);
             const numero = document.getElementById('doc-numero').value || '-';
             const numeroConAnno = numero + '/' + annoDocumentoCorrente();
             registraNumeroDocumentoUsato(tipo, numero);
@@ -1417,7 +2060,7 @@
             const logoPos = document.getElementById('logo-position').value;
             const logoTint = document.getElementById('logo-tint').value;
             const logoOpacity = parseInt(document.getElementById('logo-opacity').value, 10) / 100;
-            const logoSize = parseInt(document.getElementById('logo-size').value, 10);
+            const logoSize = logoSizePx(document.getElementById('logo-size').value);
             const noteRaw = document.getElementById('doc-note').value;
             const note = noteRaw.trim() === '' ? [] : noteRaw.split(String.fromCharCode(10));
 
@@ -1456,12 +2099,13 @@
 
             let y = 52; // margine dall'alto
 
-            // Colonna fornitore (sx) e cliente (dx): stesso numero di righe fisse, sempre allineate
-            // (una riga vuota nel fornitore tiene le due colonne alla stessa altezza, dato che il
-            // C.F. esiste solo lato cliente)
+            // Colonna azienda (sx) e cliente (dx): stesso numero di righe fisse, sempre allineate
+            // (le righe vuote tengono le due colonne alla stessa altezza). Entrambe iniziano con
+            // un'intestazione fissa in grassetto ("Azienda" / "Cliente"), simmetriche fra loro.
             const fornitoreLocalita = formattaIndirizzoLocalita(azienda['az-comune'], azienda['az-cap'], azienda['az-provincia']);
             const fornitoreRighe = [
-                { text: azienda['az-nome'] || '', size: 12 },
+                { text: 'Azienda', size: 12 },
+                { text: azienda['az-nome'] || '' },
                 { text: azienda['az-indirizzo'] || '' },
                 { text: fornitoreLocalita },
                 { text: azienda['az-tel'] ? 'Tel: ' + azienda['az-tel'] : '' },
@@ -1474,7 +2118,8 @@
                 { text: clienteIndirizzo },
                 { text: clienteLocalita },
                 { text: clientePiva ? 'P.IVA: ' + clientePiva : '' },
-                { text: clienteCf ? 'C.F.: ' + clienteCf : '' }
+                { text: clienteCf ? 'C.F.: ' + clienteCf : '' },
+                { text: '' }
             ];
 
             const startY = y;
@@ -1517,7 +2162,7 @@
             const infoTextY = infoBoxTop + infoBoxH / 2 + 4;
             ctx.font = `bold ${px(11)}px Arial, Helvetica, sans-serif`;
             ctx.textAlign = 'left';
-            ctx.fillText((tipo === 'DDT' ? 'Documento di Trasporto' : tipo) + '  N. ' + numeroConAnno, px(MX + 8), px(infoTextY));
+            ctx.fillText(tipoLabelPdf + '  N. ' + numeroConAnno, px(MX + 8), px(infoTextY));
             ctx.textAlign = 'right';
             ctx.fillText('Data: ' + dataFmt, px(RIGHT_X - 8), px(infoTextY));
 
@@ -1547,20 +2192,30 @@
                 y = infoBoxTop + infoBoxH + 22;
             }
 
-            // Tabella articoli — colonne definite per centro (testo centrato in ognuna)
-            const colX = { brand: 74, linea: 142, desc: 245, qta: 340, prezzo: 400, sconto: 459, importo: 520 };
-            // Confini sinistro/destro di ogni colonna (a metà strada tra i centri), usati per
-            // restringere il carattere e bloccare il testo dentro la propria colonna, senza mai
-            // farlo uscire dal bordo sinistro della tabella (bug: testo Brand lungo che sconfinava).
-            const colBounds = {
-                brand:   { left: MX,                              right: (colX.brand + colX.linea) / 2 },
-                linea:   { left: (colX.brand + colX.linea) / 2,    right: (colX.linea + colX.desc) / 2 },
-                desc:    { left: (colX.linea + colX.desc) / 2,     right: (colX.desc + colX.qta) / 2 },
-                qta:     { left: (colX.desc + colX.qta) / 2,       right: (colX.qta + colX.prezzo) / 2 },
-                prezzo:  { left: (colX.qta + colX.prezzo) / 2,     right: (colX.prezzo + colX.sconto) / 2 },
-                sconto:  { left: (colX.prezzo + colX.sconto) / 2,  right: (colX.sconto + colX.importo) / 2 },
-                importo: { left: (colX.sconto + colX.importo) / 2, right: RIGHT_X }
-            };
+            // Tabella articoli — colonne definite in percentuale (peso) e ricalcolate in punti PDF;
+            // Brand/Linea possono essere disattivate (checkbox "Usa campo Brand/Linea") e in tal
+            // caso non occupano affatto spazio: le colonne restanti si allargano per compensare.
+            const colonnePdf = [
+                { key: 'brand',   label: 'Brand',            weight: 11, attiva: mostraBrandAttivo() },
+                { key: 'linea',   label: 'Linea',            weight: 11, attiva: mostraLineaAttivo() },
+                { key: 'desc',    label: 'Bene o Servizio',  weight: 24, attiva: true },
+                { key: 'qta',     label: 'Q.tà',             weight: 9,  attiva: true },
+                { key: 'prezzo',  label: 'Prezzo',           weight: 12, attiva: true },
+                { key: 'sconto',  label: 'Sc.%',             weight: 9,  attiva: mostraScontoAttivo() },
+                { key: 'sconto2', label: 'Sc.2%',            weight: 9,  attiva: mostraSconto2Attivo() },
+                { key: 'importo', label: 'Importo',          weight: 13, attiva: true }
+            ].filter(c => c.attiva);
+            const pesoTotalePdf = colonnePdf.reduce((s, c) => s + c.weight, 0);
+            const larghezzaTabellaPdf = RIGHT_X - MX;
+            let cursorePdf = MX;
+            colonnePdf.forEach(c => {
+                const larghezza = (c.weight / pesoTotalePdf) * larghezzaTabellaPdf;
+                c.left = cursorePdf;
+                c.right = cursorePdf + larghezza;
+                c.cx = (c.left + c.right) / 2;
+                cursorePdf = c.right;
+            });
+            colonnePdf[colonnePdf.length - 1].right = RIGHT_X; // chiude esattamente il bordo (arrotondamenti)
             // Disegna testo centrato in una colonna, restringendo il font se necessario finché non
             // entra nella larghezza disponibile, e bloccando comunque la posizione finale dentro i
             // confini della colonna (mai oltre il bordo sx/dx), qualunque sia la lunghezza del testo.
@@ -1590,34 +2245,25 @@
             const tableBoxTop = rowTop;
 
             let textY = rowTop + baselineOffset;
-            drawFitText('Brand', colX.brand, colBounds.brand.left, colBounds.brand.right, textY, 8.5, 'bold');
-            drawFitText('Linea', colX.linea, colBounds.linea.left, colBounds.linea.right, textY, 8.5, 'bold');
-            drawFitText('Descrizione Bene o Servizio', colX.desc, colBounds.desc.left, colBounds.desc.right, textY, 8.5, 'bold');
-            drawFitText('Q.tà', colX.qta, colBounds.qta.left, colBounds.qta.right, textY, 8.5, 'bold');
-            drawFitText('Prezzo', colX.prezzo, colBounds.prezzo.left, colBounds.prezzo.right, textY, 8.5, 'bold');
-            drawFitText('Sc.%', colX.sconto, colBounds.sconto.left, colBounds.sconto.right, textY, 8.5, 'bold');
-            drawFitText('Importo', colX.importo, colBounds.importo.left, colBounds.importo.right, textY, 8.5, 'bold');
+            colonnePdf.forEach(c => drawFitText(c.label, c.cx, c.left, c.right, textY, 8.5, 'bold'));
             rowTop += rowH;
             ctx.lineWidth = px(0.9);
             ctx.beginPath(); ctx.moveTo(px(MX), px(rowTop)); ctx.lineTo(px(RIGHT_X), px(rowTop)); ctx.stroke();
 
             const righe = Array.from(righeBody.querySelectorAll('tr'));
             righe.forEach(tr => {
-                const brand = tr.querySelector('.r-brand').value;
-                const linea = tr.querySelector('.r-linea').value;
-                const desc = tr.querySelector('.r-desc').value;
-                const qta = tr.querySelector('.r-qta').value;
-                const prezzo = parseFloat(tr.querySelector('.r-prezzo').value || 0).toFixed(2);
-                const sconto = tr.querySelector('.r-sconto').value;
-                const importo = parseFloat(tr.querySelector('.r-importo').value || 0).toFixed(2) + ' €';
+                const valoriRigaPdf = {
+                    brand: tr.querySelector('.r-brand').value,
+                    linea: tr.querySelector('.r-linea').value,
+                    desc: tr.querySelector('.r-desc').value,
+                    qta: tr.querySelector('.r-qta').value,
+                    prezzo: parseFloat(tr.querySelector('.r-prezzo').value || 0).toFixed(2),
+                    sconto: tr.querySelector('.r-sconto').value,
+                    sconto2: tr.querySelector('.r-sconto2').value,
+                    importo: parseFloat(tr.querySelector('.r-importo').value || 0).toFixed(2) + ' €'
+                };
                 textY = rowTop + baselineOffset;
-                drawFitText(brand, colX.brand, colBounds.brand.left, colBounds.brand.right, textY, 8.5, '');
-                drawFitText(linea, colX.linea, colBounds.linea.left, colBounds.linea.right, textY, 8.5, '');
-                drawFitText(desc, colX.desc, colBounds.desc.left, colBounds.desc.right, textY, 8.5, '');
-                drawFitText(qta, colX.qta, colBounds.qta.left, colBounds.qta.right, textY, 8.5, '');
-                drawFitText(prezzo, colX.prezzo, colBounds.prezzo.left, colBounds.prezzo.right, textY, 8.5, '');
-                drawFitText(sconto, colX.sconto, colBounds.sconto.left, colBounds.sconto.right, textY, 8.5, '');
-                drawFitText(importo, colX.importo, colBounds.importo.left, colBounds.importo.right, textY, 8.5, 'bold');
+                colonnePdf.forEach(c => drawFitText(valoriRigaPdf[c.key], c.cx, c.left, c.right, textY, 8.5, c.key === 'importo' ? 'bold' : ''));
                 rowTop += rowH;
                 ctx.lineWidth = px(0.5);
                 ctx.beginPath(); ctx.moveTo(px(MX), px(rowTop)); ctx.lineTo(px(RIGHT_X), px(rowTop)); ctx.stroke();
@@ -1793,6 +2439,7 @@
                 qta: tr.querySelector('.r-qta').value,
                 prezzo: tr.querySelector('.r-prezzo').value,
                 sconto: tr.querySelector('.r-sconto').value,
+                sconto2: tr.querySelector('.r-sconto2').value,
                 importo: tr.querySelector('.r-importo').value,
                 importoManuale: tr.dataset.importoManuale === '1'
             }));
@@ -1845,9 +2492,14 @@
             if (!cont) return;
             const query = (document.getElementById('archivio-ricerca').value || '').toLowerCase().trim();
             let archivio = JSON.parse(localStorage.getItem('documentiArchivio') || '[]');
-            if (query) archivio = archivio.filter(d => ((d.cliente && d.cliente.nome) || '').toLowerCase().includes(query));
+            if (query) archivio = archivio.filter(d => {
+                const clienteNome = ((d.cliente && d.cliente.nome) || '').toLowerCase();
+                const numero = (d.numero || '').toLowerCase();
+                const prodotti = (d.righe || []).map(r => `${r.brand || ''} ${r.linea || ''} ${r.desc || ''}`).join(' ').toLowerCase();
+                return clienteNome.includes(query) || numero.includes(query) || prodotti.includes(query);
+            });
             if (archivio.length === 0) {
-                cont.innerHTML = '<p style="font-size:12px; color:#888;">Nessun documento in archivio.</p>';
+                cont.innerHTML = '';
                 return;
             }
             cont.innerHTML = archivio.map(d => {
@@ -1899,6 +2551,7 @@
                 tr.querySelector('.r-qta').value = r.qta || 1;
                 tr.querySelector('.r-prezzo').value = r.prezzo || 0;
                 tr.querySelector('.r-sconto').value = r.sconto || 0;
+                tr.querySelector('.r-sconto2').value = r.sconto2 || 0;
                 tr.querySelector('.r-importo').value = r.importo || 0;
                 if (r.importoManuale) tr.dataset.importoManuale = '1';
             });
@@ -2007,8 +2660,30 @@
         });
 
         // ===== CLIENTI: salvataggio, elenco, richiamo, eliminazione =====
+        // Digitando/selezionando un nome, NON si apre più nulla in automatico: si aggiorna solo
+        // l'etichetta del pulsante ("Modifica" se il nome corrisponde a un cliente già salvato,
+        // "Nuovo" altrimenti). Solo toccando quel pulsante si apre il pannello dei campi.
+        let clienteSelezionato = null;
+        function aggiornaPulsanteCliente() {
+            const nome = (document.getElementById('cl-nome').value || '').trim().toLowerCase();
+            if (!nome) {
+                clienteSelezionato = null;
+            } else {
+                const clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
+                clienteSelezionato = clienti.find(c => (c.nome || '').trim().toLowerCase() === nome) || null;
+            }
+            const btn = document.getElementById('btn-crea-nuovo-cliente');
+            if (btn.style.display !== 'none') {
+                btn.textContent = clienteSelezionato ? 'Modifica' : 'Nuovo';
+            }
+        }
+        document.getElementById('cl-nome').addEventListener('input', aggiornaPulsanteCliente);
         document.getElementById('btn-crea-nuovo-cliente').addEventListener('click', (e) => {
-            document.getElementById('cliente-dettagli').style.display = 'block';
+            if (clienteSelezionato) {
+                riempiFormCliente(clienteSelezionato);
+            } else {
+                document.getElementById('cliente-dettagli').style.display = 'block';
+            }
             e.target.style.display = 'none';
         });
 
@@ -2021,13 +2696,59 @@
             ['cl-pec', 'cl-email', 'cl-sdi', 'cl-piva', 'cl-cf', 'cl-indirizzo', 'cl-comune', 'cl-cap', 'cl-provincia', 'cl-tel', 'cl-cellulare'].forEach(id => {
                 document.getElementById(id).value = '';
             });
+            aggiornaPulsanteCliente();
             return true;
         }
         document.getElementById('btn-annulla-cliente').addEventListener('click', chiudiPannelloCliente);
 
-        // "Crea nuovo" per gli articoli: mostra Brand/Linea per inserire un bene/servizio non a catalogo
-        document.getElementById('btn-crea-nuovo-articolo').addEventListener('click', () => {
-            document.getElementById('righe-body').classList.toggle('mostra-extra');
+        // "Nuovo" per gli articoli: apre un pannello per creare un bene/servizio non ancora in
+        // memoria (come per i clienti), lo salva nel catalogo e lo aggiunge subito al documento.
+        document.getElementById('btn-crea-nuovo-articolo').addEventListener('click', (e) => {
+            document.getElementById('nuovo-prodotto-dettagli').style.display = 'block';
+            e.target.style.display = 'none';
+        });
+
+        function chiudiPannelloNuovoProdotto() {
+            document.getElementById('nuovo-prodotto-dettagli').style.display = 'none';
+            document.getElementById('btn-crea-nuovo-articolo').style.display = '';
+            ['np-brand', 'np-linea', 'np-desc'].forEach(id => { document.getElementById(id).value = ''; });
+            document.getElementById('np-qta').value = 1;
+            document.getElementById('np-prezzo').value = 0;
+            document.getElementById('np-sconto').value = 0;
+        }
+        document.getElementById('btn-annulla-nuovo-prodotto').addEventListener('click', chiudiPannelloNuovoProdotto);
+
+        document.getElementById('btn-salva-nuovo-prodotto').addEventListener('click', () => {
+            const desc = document.getElementById('np-desc').value.trim();
+            if (!desc) { toast('Inserisci una descrizione'); return; }
+            const record = {
+                brand: document.getElementById('np-brand').value,
+                linea: document.getElementById('np-linea').value,
+                desc: desc,
+                qta: parseFloat(document.getElementById('np-qta').value) || 1,
+                prezzo: parseFloat(document.getElementById('np-prezzo').value) || 0,
+                sconto: parseFloat(document.getElementById('np-sconto').value) || 0
+            };
+            const prodotti = JSON.parse(localStorage.getItem('prodotti') || '[]');
+            const idx = prodotti.findIndex(p => (p.desc || '').toLowerCase() === desc.toLowerCase());
+            if (idx >= 0) prodotti[idx] = record; else prodotti.push(record);
+            localStorage.setItem('prodotti', JSON.stringify(prodotti));
+            refreshProdottiDatalist();
+            renderProdotti();
+
+            // Aggiunge subito una riga al documento con i dati appena inseriti
+            const tr = creaRigaVuota();
+            righeBody.appendChild(tr);
+            tr.querySelector('.r-brand').value = record.brand;
+            tr.querySelector('.r-linea').value = record.linea;
+            tr.querySelector('.r-desc').value = record.desc;
+            tr.querySelector('.r-qta').value = record.qta;
+            tr.querySelector('.r-prezzo').value = record.prezzo;
+            tr.querySelector('.r-sconto').value = record.sconto;
+            recalcola();
+
+            chiudiPannelloNuovoProdotto();
+            toast('Nuovo articolo salvato e aggiunto al documento');
         });
 
         // I clienti salvati prima di questo aggiornamento avevano Città e CAP in un unico campo
@@ -2088,6 +2809,7 @@
         // Riempie il form Cliente con i dati di un cliente salvato: usata sia dall'autocompletamento
         // digitando il nome, sia dal tasto "Modifica" nell'elenco clienti nella tab Dati.
         function riempiFormCliente(c) {
+            clienteSelezionato = c;
             const legacy = c.comune === undefined ? splitLocalitaLegacy(c.localita) : null;
             document.getElementById('cl-nome').value = c.nome;
             document.getElementById('cl-indirizzo').value = c.indirizzo || '';
@@ -2110,11 +2832,15 @@
             document.getElementById('btn-crea-nuovo-cliente').style.display = 'none';
         }
 
-        // Digitando il nome cliente, se corrisponde esattamente a uno già salvato, riempie gli altri campi
+        // Digitando il nome cliente e scegliendone uno dal suggerimento, si compila solo il nome:
+        // NON si aprono più i campi in automatico, si aggiorna solo il pulsante ("Modifica"/"Nuovo").
         attachAutocomplete(document.getElementById('cl-nome'), (query) => {
             const clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
             return clienti.filter(c => (c.nome || '').toLowerCase().includes(query)).map(c => ({ label: c.nome, data: c }));
-        }, riempiFormCliente);
+        }, (c) => {
+            document.getElementById('cl-nome').value = c.nome;
+            aggiornaPulsanteCliente();
+        });
 
         function escapeHtml(s) {
             return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -2159,7 +2885,7 @@
                 riempiFormCliente(c);
                 document.querySelector('.tab-btn[data-tab="documento"]').click();
                 document.getElementById('cl-nome').scrollIntoView({ behavior: 'smooth', block: 'center' });
-                toast('Modifica i campi e premi "Salva Cliente"');
+                toast('Modifica i campi e premi "Salva"');
             } else if (btnDel) {
                 const clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
                 const idx = parseInt(btnDel.dataset.eliminaCliente, 10);
@@ -2193,6 +2919,7 @@
                 tr.querySelector('.r-qta').value = p.qta || 1;
                 tr.querySelector('.r-prezzo').value = p.prezzo;
                 tr.querySelector('.r-sconto').value = p.sconto;
+                tr.querySelector('.r-sconto2').value = 0;
                 recalcola();
             });
         }
@@ -2296,25 +3023,21 @@
         });
 
         // ===== NOTA PREDEFINITA A PIÈ DI PAGINA =====
-        // Nota "di fabbrica" incorporata nell'app: se un dispositivo/browser ha già salvato una
-        // notaDefault in passato (localStorage NON si sincronizza tra dispositivi né si aggiorna
-        // da solo quando l'app viene aggiornata), quel valore vecchio ha sempre la precedenza qui
-        // sotto e nasconde qualunque nuova nota di fabbrica finché non viene ripristinata a mano.
-        const NOTA_DI_FABBRICA = "I prezzi indicati sono da intendersi IVA esclusa; l'IVA sarà esposta in fattura.";
-        const notaSalvata = localStorage.getItem('notaDefault') || NOTA_DI_FABBRICA;
+        // Nessun testo "di fabbrica" precompilato: il campo parte vuoto (si vede solo il
+        // suggerimento grigio "Note a piè di pagina") finché non viene scritta
+        // e salvata una nota predefinita propria per questo dispositivo/browser.
+        // Pulizia una tantum: alcuni dispositivi hanno ancora salvato in memoria la vecchia nota
+        // "di fabbrica" (IVA esclusa) di una versione precedente — la rimuoviamo una sola volta,
+        // solo se corrisponde esattamente al vecchio testo (mai se l'utente l'ha modificata).
+        const NOTA_VECCHIA_DEFAULT = "I prezzi indicati sono da intendersi IVA esclusa; l'IVA sarà esposta in fattura.";
+        if (!localStorage.getItem('notaPuliziaV1')) {
+            if ((localStorage.getItem('notaDefault') || '').trim() === NOTA_VECCHIA_DEFAULT) {
+                localStorage.removeItem('notaDefault');
+            }
+            localStorage.setItem('notaPuliziaV1', '1');
+        }
+        const notaSalvata = localStorage.getItem('notaDefault') || '';
         document.getElementById('doc-note').value = notaSalvata;
-        document.getElementById('btn-salva-nota-default').addEventListener('click', () => {
-            const val = document.getElementById('doc-note').value;
-            localStorage.setItem('notaDefault', val);
-            toast('Nota predefinita salvata');
-        });
-        document.getElementById('btn-reset-nota-default').addEventListener('click', () => {
-            localStorage.removeItem('notaDefault');
-            document.getElementById('doc-note').value = NOTA_DI_FABBRICA;
-            const notesInput = document.getElementById('preview-notes-input');
-            if (notesInput) notesInput.value = NOTA_DI_FABBRICA;
-            toast('Nota predefinita ripristinata su questo dispositivo');
-        });
 
         // ===== IMPORT CSV (da Excel, AlfaDeskPro, Aruba) =====
         // Parser semplice: rileva da solo se il file usa la virgola o il punto e virgola
@@ -2823,6 +3546,11 @@
             renderProdotti();
             toast('Beni e Servizi cancellati');
         });
+        document.getElementById('btn-svuota-tutto').addEventListener('click', () => {
+            if (!confirm('Cancellare tutti i dati dell\'app (azienda, clienti, beni e servizi, archivio documenti)? L\'operazione non è reversibile.')) return;
+            localStorage.clear();
+            location.reload();
+        });
 
         // ===== BACKUP / IMPORT =====
         document.getElementById('btn-export').addEventListener('click', () => {
@@ -2862,6 +3590,15 @@
                 }
             };
             reader.readAsText(file);
+        });
+
+        // ===== SCHERMATA DI BENVENUTO =====
+        document.getElementById('btn-splash-start').addEventListener('click', () => {
+            const splash = document.getElementById('splash-screen');
+            splash.style.transition = 'opacity 0.25s ease-out';
+            splash.style.opacity = '0';
+            document.body.classList.remove('has-splash');
+            setTimeout(() => { splash.style.display = 'none'; }, 250);
         });
 
         // ===== INIT =====
